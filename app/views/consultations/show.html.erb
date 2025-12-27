@@ -1,0 +1,103 @@
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-12">
+      <div class="card border-success">
+        <div class="card-header bg-success text-white">
+          <div class="d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">
+              <i class="fas fa-notes-medical"></i> Compte Rendu de Consultation
+            </h3>
+            <div>
+              <%= link_to "← Retour au RDV", appointment_path(@appointment), class: "btn btn-light btn-sm" %>
+              <% if current_user.medecin_or_owner? %>
+                <%= link_to "Modifier", edit_appointment_consultation_path(@appointment, @consultation), class: "btn btn-warning btn-sm" %>
+                <%= link_to "Supprimer", appointment_consultation_path(@appointment, @consultation), 
+                           method: :delete,
+                           data: { turbo_method: :delete, turbo_confirm: "Êtes-vous sûr ?" },
+                           class: "btn btn-danger btn-sm" %>
+              <% end %>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Info patient et RDV -->
+          <div class="alert alert-info mb-4">
+            <div class="row">
+              <div class="col-md-4">
+                <strong>Patient:</strong> <%= @appointment.patient.nom_complet %><br>
+                <strong>N° Dossier:</strong> <%= @appointment.patient.numero_dossier %>
+              </div>
+              <div class="col-md-4">
+                <strong>Date consultation:</strong> <%= l(@appointment.date_rdv, format: :long) %><br>
+                <strong>Heure:</strong> <%= @appointment.heure_debut.strftime("%H:%M") %>
+              </div>
+              <div class="col-md-4">
+                <strong>Médecin:</strong> Dr <%= @appointment.medecin.last_name %> <%= @appointment.medecin.first_name %>
+              </div>
+            </div>
+          </div>
+
+          <!-- Diagnostic -->
+          <div class="mb-4">
+            <h5 class="text-success"><i class="fas fa-stethoscope"></i> Diagnostic</h5>
+            <div class="p-3 bg-light rounded">
+              <%= simple_format(@consultation.diagnostic) %>
+            </div>
+          </div>
+
+          <!-- Traitement -->
+          <% if @consultation.traitement.present? %>
+            <div class="mb-4">
+              <h5 class="text-primary"><i class="fas fa-pills"></i> Traitement prescrit</h5>
+              <div class="p-3 bg-light rounded">
+                <%= simple_format(@consultation.traitement) %>
+              </div>
+            </div>
+          <% end %>
+
+          <!-- Observations -->
+          <% if @consultation.observations.present? %>
+            <div class="mb-4">
+              <h5 class="text-info"><i class="fas fa-clipboard"></i> Observations</h5>
+              <div class="p-3 bg-light rounded">
+                <%= simple_format(@consultation.observations) %>
+              </div>
+            </div>
+          <% end %>
+
+          <!-- Ordonnance -->
+          <% if @consultation.ordonnance.present? %>
+            <div class="mb-4">
+              <h5 class="text-warning"><i class="fas fa-file-prescription"></i> Ordonnance détaillée</h5>
+              <div class="p-3 bg-light rounded border border-warning">
+                <%= simple_format(@consultation.ordonnance) %>
+              </div>
+            </div>
+          <% end %>
+
+          <!-- Prochain RDV -->
+          <% if @consultation.prochain_rdv.present? %>
+            <div class="alert alert-success">
+              <i class="fas fa-calendar-check"></i> 
+              <strong>Prochain rendez-vous prévu:</strong> <%= l(@consultation.prochain_rdv, format: :long) %>
+            </div>
+          <% end %>
+
+          <!-- Confidentialité -->
+          <div class="alert alert-warning mt-4">
+            <i class="fas fa-lock"></i> 
+            <strong>Confidentiel:</strong> Ce document est strictement confidentiel et réservé aux médecins.
+          </div>
+
+          <!-- Timestamps -->
+          <div class="text-muted small mt-3">
+            <strong>Créé le:</strong> <%= l(@consultation.created_at, format: :long) %>
+            <% if @consultation.updated_at != @consultation.created_at %>
+              <br><strong>Dernière modification:</strong> <%= l(@consultation.updated_at, format: :long) %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

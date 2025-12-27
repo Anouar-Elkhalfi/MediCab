@@ -1,2 +1,144 @@
-<h1>Pages#home</h1>
-<p>Find me in app/views/pages/home.html.erb</p>
+<div class="container mt-5">
+  <div class="row">
+    <div class="col-md-12">
+      <% if user_signed_in? %>
+        <div class="jumbotron bg-light p-5 rounded">
+          <h1 class="display-4">Bienvenue sur MediCab, <%= current_user.first_name || current_user.email %> ! 👋</h1>
+          <p class="lead">
+            <% if current_user.super_admin? %>
+              <span class="badge bg-danger">Super Admin</span>
+              Vous avez accès à tous les cabinets via l'interface d'administration.
+            <% elsif current_user.cabinet.present? %>
+              <span class="badge bg-<%= current_user.owner? ? 'primary' : current_user.medecin? ? 'success' : current_user.secretaire? ? 'info' : 'secondary' %>">
+                <%= current_user.role.titleize %>
+              </span>
+              <%= current_user.cabinet.nom %>
+            <% else %>
+              Créez votre cabinet pour commencer à utiliser MediCab.
+            <% end %>
+          </p>
+          <hr class="my-4">
+          
+          <% if current_user.super_admin? %>
+            <a class="btn btn-danger btn-lg" href="/admin" role="button">
+              <i class="fas fa-shield-alt"></i> Accéder à l'administration
+            </a>
+          <% elsif current_user.cabinet.present? %>
+            <div class="row mt-4">
+              <div class="col-md-3">
+                <div class="card text-center">
+                  <div class="card-body">
+                    <h2 class="text-primary"><%= current_cabinet.medecins.count %></h2>
+                    <p class="text-muted">Médecins</p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card text-center">
+                  <div class="card-body">
+                    <h2 class="text-success"><%= current_cabinet.secretaires.count %></h2>
+                    <p class="text-muted">Secrétaires</p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <%= link_to patients_path, class: "text-decoration-none" do %>
+                  <div class="card text-center h-100">
+                    <div class="card-body">
+                      <h2 class="text-info"><%= current_cabinet.patients.count %></h2>
+                      <p class="text-muted mb-0">Patients</p>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+              <div class="col-md-3">
+                <div class="card text-center">
+                  <div class="card-body">
+                    <h2 class="text-warning">0</h2>
+                    <p class="text-muted">RDV aujourd'hui</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4">
+              <%= link_to "Voir mon cabinet", cabinet_path(current_cabinet), class: "btn btn-primary btn-lg" %>
+              <% if current_user.can_manage_cabinet? %>
+                <%= link_to "Gérer les utilisateurs", "#", class: "btn btn-secondary btn-lg" %>
+              <% end %>
+            </div>
+          <% else %>
+            <%= link_to "Créer mon cabinet", new_cabinet_path, class: "btn btn-primary btn-lg" %>
+          <% end %>
+        </div>
+
+        <% if current_user.cabinet.present? && !current_user.super_admin? %>
+          <div class="row mt-5">
+            <div class="col-md-12">
+              <h3>Prochaines fonctionnalités 🚀</h3>
+              <div class="list-group mt-3">
+                <div class="list-group-item">
+                  <h5 class="mb-1">📅 Gestion des Rendez-vous</h5>
+                  <p class="mb-1">Calendrier, prise de RDV, liste d'attente</p>
+                </div>
+                <div class="list-group-item">
+                  <h5 class="mb-1">👥 Gestion des Patients</h5>
+                  <p class="mb-1">Fiches patients, dossiers médicaux, historique</p>
+                </div>
+                <div class="list-group-item">
+                  <h5 class="mb-1">💊 Consultations & Ordonnances</h5>
+                  <p class="mb-1">Notes de consultation, ordonnances, génération PDF</p>
+                </div>
+                <div class="list-group-item">
+                  <h5 class="mb-1">💰 Encaissement & Facturation</h5>
+                  <p class="mb-1">Facturation, paiements, dashboard financier</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+
+      <% else %>
+        <!-- Landing page pour non connectés -->
+        <div class="jumbotron bg-gradient text-white p-5 rounded" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+          <h1 class="display-3">MediCab</h1>
+          <p class="lead">La solution SaaS complète pour la gestion de votre cabinet médical</p>
+          <hr class="my-4 bg-white">
+          <p>Gestion des patients, rendez-vous, consultations, ordonnances et encaissements</p>
+          <%= link_to "S'inscrire", new_user_registration_path, class: "btn btn-light btn-lg" %>
+          <%= link_to "Se connecter", new_user_session_path, class: "btn btn-outline-light btn-lg" %>
+        </div>
+
+        <div class="row mt-5">
+          <div class="col-md-4">
+            <div class="card h-100">
+              <div class="card-body text-center">
+                <i class="fas fa-calendar-alt fa-3x text-primary mb-3"></i>
+                <h4>Gestion des RDV</h4>
+                <p>Calendrier intelligent, prise de RDV en ligne, liste d'attente</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card h-100">
+              <div class="card-body text-center">
+                <i class="fas fa-users fa-3x text-success mb-3"></i>
+                <h4>Dossiers Patients</h4>
+                <p>Fiches complètes, historique médical, documents sécurisés</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card h-100">
+              <div class="card-body text-center">
+                <i class="fas fa-euro-sign fa-3x text-warning mb-3"></i>
+                <h4>Facturation</h4>
+                <p>Encaissement, factures, suivi des paiements</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,81 @@
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="mb-0">Nouveau Rendez-vous</h3>
+        </div>
+        <div class="card-body">
+          <%= simple_form_for @appointment do |f| %>
+            <%= f.error_notification %>
+            <%= f.error_notification message: f.object.errors[:base].to_sentence if f.object.errors[:base].present? %>
+
+            <div class="row">
+              <!-- Colonne gauche -->
+              <div class="col-md-6">
+                <%= f.association :patient,
+                                 collection: @patients,
+                                 label_method: ->(p) { "#{p.numero_dossier} - #{p.nom_complet}" },
+                                 prompt: "Sélectionner un patient",
+                                 include_blank: false,
+                                 input_html: { class: 'form-select' } %>
+
+                <%= f.association :medecin,
+                                 collection: @medecins,
+                                 label_method: ->(m) { "Dr #{m.last_name} #{m.first_name}" },
+                                 prompt: "Sélectionner un médecin",
+                                 include_blank: false,
+                                 input_html: { class: 'form-select' } %>
+
+                <%= f.input :date_rdv,
+                           as: :date,
+                           html5: true,
+                           label: "Date du rendez-vous",
+                           input_html: { class: 'form-control' } %>
+
+                <%= f.input :heure_debut,
+                           as: :time,
+                           html5: true,
+                           label: "Heure de début",
+                           input_html: { class: 'form-control', step: 900 } %>
+              </div>
+
+              <!-- Colonne droite -->
+              <div class="col-md-6">
+                <%= f.input :duree,
+                           collection: [15, 30, 45, 60, 90, 120],
+                           label: "Durée (minutes)",
+                           prompt: "Sélectionner une durée",
+                           include_blank: false,
+                           input_html: { class: 'form-select' } %>
+
+                <%= f.input :motif,
+                           as: :text,
+                           label: "Motif de consultation",
+                           input_html: { class: 'form-control', rows: 3 },
+                           hint: "Ex: Consultation de suivi, Première consultation, etc." %>
+
+                <%= f.input :notes,
+                           as: :text,
+                           label: "Notes (optionnel)",
+                           input_html: { class: 'form-control', rows: 3 },
+                           required: false %>
+
+                <%= f.input :statut,
+                           collection: Appointment.statuts.keys.map { |k| [k.humanize, k] },
+                           label: "Statut",
+                           include_blank: false,
+                           input_html: { class: 'form-select' } %>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between mt-4">
+              <%= link_to "Annuler", :back, class: "btn btn-secondary" %>
+              <%= f.button :submit, "Créer le rendez-vous", class: "btn btn-primary" %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

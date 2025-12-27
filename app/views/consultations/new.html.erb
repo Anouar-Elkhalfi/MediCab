@@ -1,0 +1,86 @@
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-10">
+      <div class="card">
+        <div class="card-header bg-success text-white">
+          <h3 class="mb-0">
+            <i class="fas fa-notes-medical"></i> Nouveau Compte Rendu de Consultation
+          </h3>
+        </div>
+        <div class="card-body">
+          <!-- Info patient -->
+          <div class="alert alert-info mb-4">
+            <div class="row">
+              <div class="col-md-6">
+                <strong>Patient:</strong> <%= @appointment.patient.nom_complet %><br>
+                <strong>N° Dossier:</strong> <%= @appointment.patient.numero_dossier %>
+              </div>
+              <div class="col-md-6">
+                <strong>Date RDV:</strong> <%= l(@appointment.date_rdv, format: :long) %><br>
+                <strong>Heure:</strong> <%= @appointment.heure_debut.strftime("%H:%M") %>
+              </div>
+            </div>
+          </div>
+
+          <%= simple_form_for [@appointment, @consultation] do |f| %>
+            <%= f.error_notification %>
+            <%= f.error_notification message: f.object.errors[:base].to_sentence if f.object.errors[:base].present? %>
+
+            <div class="row">
+              <!-- Colonne gauche -->
+              <div class="col-md-6">
+                <%= f.input :diagnostic,
+                           as: :text,
+                           label: "Diagnostic *",
+                           input_html: { class: 'form-control', rows: 5 },
+                           hint: "Diagnostic médical de la consultation",
+                           required: true %>
+
+                <%= f.input :traitement,
+                           as: :text,
+                           label: "Traitement prescrit",
+                           input_html: { class: 'form-control', rows: 5 },
+                           hint: "Médicaments et posologie",
+                           required: false %>
+
+                <%= f.input :prochain_rdv,
+                           as: :date,
+                           html5: true,
+                           label: "Prochain RDV (optionnel)",
+                           input_html: { class: 'form-control' },
+                           required: false %>
+              </div>
+
+              <!-- Colonne droite -->
+              <div class="col-md-6">
+                <%= f.input :observations,
+                           as: :text,
+                           label: "Observations",
+                           input_html: { class: 'form-control', rows: 5 },
+                           hint: "Notes cliniques, recommandations",
+                           required: false %>
+
+                <%= f.input :ordonnance,
+                           as: :text,
+                           label: "Ordonnance détaillée",
+                           input_html: { class: 'form-control', rows: 7 },
+                           hint: "Détail de l'ordonnance médicale",
+                           required: false %>
+              </div>
+            </div>
+
+            <div class="alert alert-warning mt-3">
+              <i class="fas fa-lock"></i> 
+              <strong>Confidentialité:</strong> Ce compte rendu est strictement confidentiel et ne sera visible que par les médecins du cabinet.
+            </div>
+
+            <div class="d-flex justify-content-between mt-4">
+              <%= link_to "Annuler", appointment_path(@appointment), class: "btn btn-secondary" %>
+              <%= f.button :submit, "Enregistrer le compte rendu", class: "btn btn-success" %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

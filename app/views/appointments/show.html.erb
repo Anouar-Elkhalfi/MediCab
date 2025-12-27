@@ -1,0 +1,232 @@
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-12">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Détails du Rendez-vous</h2>
+        <div>
+          <%= link_to "← Retour", :back, class: "btn btn-outline-secondary" %>
+          <% if policy(@appointment).update? %>
+            <%= link_to "Modifier", edit_appointment_path(@appointment), class: "btn btn-primary" %>
+          <% end %>
+          <% if policy(@appointment).destroy? %>
+            <%= link_to "Supprimer", appointment_path(@appointment), 
+                       method: :delete,
+                       data: { turbo_method: :delete, turbo_confirm: "Êtes-vous sûr de vouloir supprimer ce rendez-vous ?" },
+                       class: "btn btn-danger" %>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="row">
+        <!-- Informations du patient -->
+        <div class="col-md-6 mb-3">
+          <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0">Patient</h5>
+            </div>
+            <div class="card-body">
+              <h4><%= @appointment.patient.nom_complet %></h4>
+              <p class="mb-2">
+                <strong>N° Dossier:</strong> <%= @appointment.patient.numero_dossier %>
+              </p>
+              <p class="mb-2">
+                <strong>Téléphone:</strong> <%= @appointment.patient.telephone_complet %>
+              </p>
+              <p class="mb-0">
+                <%= link_to "Voir la fiche patient", patient_path(@appointment.patient), class: "btn btn-sm btn-outline-primary" %>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Informations du rendez-vous -->
+        <div class="col-md-6 mb-3">
+          <div class="card h-100">
+            <div class="card-header bg-info text-white">
+              <h5 class="mb-0">Rendez-vous</h5>
+            </div>
+            <div class="card-body">
+              <p class="mb-2">
+                <strong>Médecin:</strong> Dr <%= @appointment.medecin.last_name %> <%= @appointment.medecin.first_name %>
+              </p>
+              <p class="mb-2">
+                <strong>Date:</strong> <%= l(@appointment.date_rdv, format: :long) %>
+              </p>
+              <p class="mb-2">
+                <strong>Heure:</strong> <%= @appointment.heure_debut.strftime("%H:%M") %> - <%= @appointment.heure_fin.strftime("%H:%M") %>
+              </p>
+              <p class="mb-2">
+                <strong>Durée:</strong> <%= @appointment.duree %> minutes
+              </p>
+              <p class="mb-0">
+                <strong>Statut:</strong> 
+                <span class="badge <%= "bg-#{Appointment::STATUT_COLORS[@appointment.statut]}" %>"
+                      style="<%= 'background-color: #FF69B4 !important;' if @appointment.statut == 'a_venir' %>">
+                  <%= @appointment.statut.humanize %>
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Motif et notes -->
+      <div class="row">
+        <div class="col-md-12 mb-3">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">Détails de la consultation</h5>
+            </div>
+            <div class="card-body">
+              <% if @appointment.motif.present? %>
+                <div class="mb-3">
+                  <strong>Motif:</strong><br>
+                  <%= simple_format(@appointment.motif) %>
+                </div>
+              <% end %>
+
+              <% if @appointment.notes.present? %>
+                <div class="mb-3">
+                  <strong>Notes:</strong><br>
+                  <%= simple_format(@appointment.notes) %>
+                </div>
+              <% end %>
+
+              <!-- Compte rendu médical (uniquement pour médecins) -->
+              <% if current_user.medecin_or_owner? %>
+                <hr class="my-4">
+                <div class="<%= @appointment.consultation.present? ? 'alert alert-success' : 'alert alert-warning' %>">
+                  <i class="fas fa-notes-medical"></i>
+                  <strong>Compte rendu médical:</strong>
+                  <% if @appointment.consultation.present? %>
+                    <p class="mb-2 mt-2">Un compte rendu a été enregistré pour cette consultation.</p>
+                    <%= link_to "Voir le compte rendu", appointment_consultation_path(@appointment, @appointment.consultation), class: "btn btn-success btn-sm me-2" %>
+                    <%= link_to "Modifier le compte rendu", edit_appointment_consultation_path(@appointment, @appointment.consultation), class: "btn btn-warning btn-sm" %>
+                  <% else %>
+                    <p class="mb-2 mt-2">Aucun compte rendu n'a été enregistré pour cette consultation.</p>
+                    <%= link_to "Créer un compte rendu", new_appointment_consultation_path(@appointment), class: "btn btn-primary btn-sm" %>
+                  <% end %>
+                </div>
+                <small class="text-muted">
+                  <i class="fas fa-lock"></i> Les comptes rendus sont confidentiels et visibles uniquement par les médecins.
+                </small>
+              <% end %>
+
+              <% if @appointment.raison_annulation.present? %>
+                <div class="alert alert-warning">
+                  <strong>Raison d'annulation:</strong><br>
+                  <%= @appointment.raison_annulation %>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chronologie -->
+      <div class="row">
+        <div class="col-md-12 mb-3">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">Chronologie</h5>
+            </div>
+            <div class="card-body">
+              <ul class="list-unstyled mb-0">
+                <li class="mb-2">
+                  <strong>Créé le:</strong> <%= l(@appointment.created_at, format: :long) %>
+                </li>
+                
+                <% if @appointment.heure_arrivee.present? %>
+                  <li class="mb-2">
+                    <strong>Arrivée en salle d'attente:</strong> <%= @appointment.heure_arrivee.strftime("%H:%M") %>
+                    <% if @appointment.temps_attente %>
+                      <span class="badge bg-info ms-2"><%= @appointment.temps_attente %> min d'attente</span>
+                    <% end %>
+                  </li>
+                <% end %>
+
+                <% if @appointment.heure_appel.present? %>
+                  <li class="mb-2">
+                    <strong>Appelé:</strong> <%= @appointment.heure_appel.strftime("%H:%M") %>
+                  </li>
+                <% end %>
+
+                <% if @appointment.heure_debut_consultation.present? %>
+                  <li class="mb-2">
+                    <strong>Début de consultation:</strong> <%= @appointment.heure_debut_consultation.strftime("%H:%M") %>
+                  </li>
+                <% end %>
+
+                <% if @appointment.heure_fin_consultation.present? %>
+                  <li class="mb-2">
+                    <strong>Fin de consultation:</strong> <%= @appointment.heure_fin_consultation.strftime("%H:%M") %>
+                    <% if @appointment.duree_consultation %>
+                      <span class="badge bg-success ms-2"><%= @appointment.duree_consultation %> min de consultation</span>
+                    <% end %>
+                  </li>
+                <% end %>
+
+                <li class="mb-0">
+                  <strong>Dernière modification:</strong> <%= l(@appointment.updated_at, format: :long) %>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions rapides (pour médecins et secrétaires) -->
+      <% if policy(@appointment).change_status? %>
+        <div class="row">
+          <div class="col-md-12 mb-3">
+            <div class="card">
+              <div class="card-header">
+                <h5 class="mb-0">Actions rapides</h5>
+              </div>
+              <div class="card-body">
+              <div class="d-flex flex-wrap gap-2">
+                <% if @appointment.a_venir? %>
+                  <%= button_to "Patient arrivé", 
+                               change_status_appointment_path(@appointment, new_status: 'marquer_arrive'),
+                               method: :patch,
+                               class: "btn btn-warning" %>
+                <% end %>
+
+                <% if @appointment.en_salle_attente? %>
+                  <%= button_to "Appeler le patient", 
+                               change_status_appointment_path(@appointment, new_status: 'appeler'),
+                               method: :patch,
+                               class: "btn btn-primary" %>
+                  <%= button_to "Commencer consultation", 
+                               change_status_appointment_path(@appointment, new_status: 'commencer'),
+                               method: :patch,
+                               class: "btn btn-success" %>
+                  <%= button_to "Marquer absent", 
+                               change_status_appointment_path(@appointment, new_status: 'absent'),
+                               method: :patch,
+                               class: "btn btn-info",
+                               form: { data: { turbo_confirm: "Confirmer l'absence ?" } } %>
+                <% end %>
+
+                <% if @appointment.vu? %>
+                  <%= button_to "Marquer encaissé", 
+                               change_status_appointment_path(@appointment, new_status: 'encaisser'),
+                               method: :patch,
+                               class: "btn btn-dark" %>
+                <% end %>
+
+                <% unless @appointment.annule? %>
+                  <%= button_to "Annuler le RDV", 
+                               change_status_appointment_path(@appointment, new_status: 'annuler', raison: 'Annulé par le cabinet'),
+                               method: :patch,
+                               class: "btn btn-secondary",
+                               form: { data: { turbo_confirm: "Confirmer l'annulation ?" } } %>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

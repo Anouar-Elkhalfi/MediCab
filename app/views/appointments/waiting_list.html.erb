@@ -1,0 +1,132 @@
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-12">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Salle d'attente</h2>
+        <div>
+          <%= link_to "← Retour au calendrier", calendar_appointments_path, class: "btn btn-outline-secondary" %>
+        </div>
+      </div>
+
+      <!-- Filtres -->
+      <div class="card mb-3">
+        <div class="card-body">
+          <%= form_with url: waiting_list_appointments_path, method: :get, local: true, class: "row g-3" do |f| %>
+            <div class="col-md-6">
+              <%= f.select :medecin_id, 
+                          options_from_collection_for_select(@medecins, :id, ->(m) { "Dr #{m.last_name} #{m.first_name}" }, params[:medecin_id]),
+                          { prompt: "Tous les médecins" },
+                          class: "form-select" %>
+            </div>
+            <div class="col-md-6">
+              <%= f.submit "Filtrer", class: "btn btn-primary" %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Info -->
+      <div class="alert alert-info">
+        <strong><%= @appointments.count %></strong> patient(s) en salle d'attente aujourd'hui
+      </div>
+
+      <!-- Liste des patients en attente -->
+      <% if @appointments.any? %>
+        <div class="row">
+          <% @appointments.each do |appointment| %>
+            <div class="col-md-6 mb-3">
+              <div class="card h-100 border-warning">
+                <div class="card-header bg-warning">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                      <%= appointment.patient.nom_complet %>
+                    </h5>
+                    <span class="badge bg-dark">
+                      <%= appointment.patient.numero_dossier %>
+                    </span>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="row mb-3">
+                    <div class="col-6">
+                      <strong>Médecin:</strong><br>
+                      <%= "Dr #{appointment.medecin.last_name} #{appointment.medecin.first_name}" %>
+                    </div>
+                    <div class="col-6">
+                      <strong>Heure RDV:</strong><br>
+                      <%= appointment.heure_debut.strftime("%H:%M") %>
+                    </div>
+                  </div>
+
+                  <div class="row mb-3">
+                    <div class="col-6">
+                      <strong>Heure d'arrivée:</strong><br>
+                      <%= appointment.heure_arrivee&.strftime("%H:%M") || "Non enregistrée" %>
+                    </div>
+                    <div class="col-6">
+                      <strong>Temps d'attente:</strong><br>
+                      <% if appointment.heure_arrivee %>
+                        <span class="badge bg-info">
+                          <%= appointment.temps_attente %> min
+                        </span>
+                      <% else %>
+                        <span class="text-muted">-</span>
+                      <% end %>
+                    </div>
+                  </div>
+
+                  <% if appointment.motif.present? %>
+                    <div class="mb-3">
+                      <strong>Motif:</strong><br>
+                      <%= appointment.motif %>
+                    </div>
+                  <% end %>
+
+                  <% if appointment.notes.present? %>
+                    <div class="mb-3">
+                      <strong>Notes:</strong><br>
+                      <%= simple_format(appointment.notes) %>
+                    </div>
+                  <% end %>
+
+                  <div class="d-flex gap-2 flex-wrap">
+                    <%= link_to "Voir détails", appointment_path(appointment), class: "btn btn-sm btn-info" %>
+                    
+                    <%= button_to "Appeler le patient", 
+                                 change_status_appointment_path(appointment, new_status: 'appeler'),
+                                 method: :patch,
+                                 class: "btn btn-sm btn-primary",
+                                 form: { data: { turbo_confirm: "Appeler #{appointment.patient.nom_complet} ?" } } %>
+                    
+                    <%= button_to "Commencer consultation", 
+                                 change_status_appointment_path(appointment, new_status: 'commencer'),
+                                 method: :patch,
+                                 class: "btn btn-sm btn-success",
+                                 form: { data: { turbo_confirm: "Commencer la consultation ?" } } %>
+                    
+                    <%= button_to "Marquer absent", 
+                                 change_status_appointment_path(appointment, new_status: 'absent'),
+                                 method: :patch,
+                                 class: "btn btn-sm btn-warning",
+                                 form: { data: { turbo_confirm: "Marquer #{appointment.patient.nom_complet} comme absent ?" } } %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="alert alert-secondary text-center">
+          <h4>Aucun patient en salle d'attente</h4>
+          <p class="mb-0">La salle d'attente est vide pour le moment.</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<style>
+  .card-header.bg-warning {
+    color: #000;
+  }
+</style>

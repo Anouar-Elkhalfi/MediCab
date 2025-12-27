@@ -1,0 +1,101 @@
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-12">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Tous les Rendez-vous</h2>
+        <div>
+          <%= link_to "Calendrier", calendar_appointments_path, class: "btn btn-primary me-2" %>
+          <%= link_to "Liste d'attente", waiting_list_appointments_path, class: "btn btn-warning me-2" %>
+          <%= link_to "Nouveau RDV", new_appointment_path, class: "btn btn-success" %>
+        </div>
+      </div>
+
+      <!-- Filtres -->
+      <div class="card mb-3">
+        <div class="card-body">
+          <%= form_with url: appointments_path, method: :get, local: true, class: "row g-3" do |f| %>
+            <div class="col-md-4">
+              <%= f.select :medecin_id,
+                          options_from_collection_for_select(
+                            current_cabinet.users.where(role: [:medecin, :owner]),
+                            :id,
+                            ->(m) { "Dr #{m.last_name} #{m.first_name}" },
+                            params[:medecin_id]
+                          ),
+                          { prompt: "Tous les médecins" },
+                          class: "form-select" %>
+            </div>
+            <div class="col-md-3">
+              <%= f.select :statut,
+                          options_for_select(
+                            Appointment.statuts.keys.map { |k| [k.humanize, k] },
+                            params[:statut]
+                          ),
+                          { prompt: "Tous les statuts" },
+                          class: "form-select" %>
+            </div>
+            <div class="col-md-3">
+              <%= f.submit "Filtrer", class: "btn btn-primary" %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Liste des rendez-vous -->
+      <% if @appointments.any? %>
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Heure</th>
+                <th>Patient</th>
+                <th>Médecin</th>
+                <th>Motif</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @appointments.each do |appointment| %>
+                <tr>
+                  <td><%= l(appointment.date_rdv, format: :short) %></td>
+                  <td>
+                    <%= appointment.heure_debut.strftime("%H:%M") %> - 
+                    <%= appointment.heure_fin.strftime("%H:%M") %>
+                  </td>
+                  <td>
+                    <%= link_to appointment.patient.nom_complet, patient_path(appointment.patient) %>
+                    <br>
+                    <small class="text-muted"><%= appointment.patient.numero_dossier %></small>
+                  </td>
+                  <td>Dr <%= appointment.medecin.last_name %> <%= appointment.medecin.first_name %></td>
+                  <td>
+                    <%= truncate(appointment.motif, length: 50) %>
+                  </td>
+                  <td>
+                    <span class="badge <%= "bg-#{Appointment::STATUT_COLORS[appointment.statut]}" %>"
+                          style="<%= 'background-color: #FF69B4 !important;' if appointment.statut == 'a_venir' %>">
+                      <%= appointment.statut.humanize %>
+                    </span>
+                  </td>
+                  <td>
+                    <%= link_to "Voir", appointment_path(appointment), class: "btn btn-sm btn-info" %>
+                    <%= link_to "Modifier", edit_appointment_path(appointment), class: "btn btn-sm btn-warning" %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+
+        <%= paginate @appointments %>
+      <% else %>
+        <div class="alert alert-info text-center">
+          <h4>Aucun rendez-vous trouvé</h4>
+          <p class="mb-0">Créez votre premier rendez-vous en cliquant sur le bouton ci-dessus.</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

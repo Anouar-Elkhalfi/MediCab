@@ -1,5 +1,26 @@
 Rails.application.routes.draw do
+  ActiveAdmin.routes(self)
   devise_for :users
+  
+  # Cabinets (onboarding)
+  resources :cabinets, only: [:new, :create, :show, :edit, :update]
+  
+  # Patients
+  resources :patients
+  
+  # Rendez-vous
+  resources :appointments do
+    collection do
+      get :calendar
+      get :waiting_list
+    end
+    member do
+      patch :change_status
+    end
+    # Consultations (comptes rendus) - uniquement pour les médecins
+    resources :consultations, only: [:show, :new, :create, :edit, :update, :destroy]
+  end
+  
   root to: "pages#home"
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 

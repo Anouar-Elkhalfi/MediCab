@@ -1,0 +1,77 @@
+<div class="container mt-5">
+  <div class="row">
+    <div class="col-md-8 mx-auto">
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+          <h3 class="mb-0"><i class="fas fa-clinic-medical"></i> <%= @cabinet.nom %></h3>
+          <% if policy(@cabinet).update? %>
+            <%= link_to "Modifier", edit_cabinet_path(@cabinet), class: "btn btn-light btn-sm" %>
+          <% end %>
+        </div>
+        <div class="card-body">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <p><strong>Spécialité :</strong><br>
+              <%= @cabinet.specialite || "Non renseignée" %></p>
+            </div>
+            <div class="col-md-6">
+              <p><strong>SIRET :</strong><br>
+              <%= @cabinet.siret || "Non renseigné" %></p>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-12">
+              <p><strong>Adresse :</strong><br>
+              <%= simple_format(@cabinet.adresse) || "Non renseignée" %></p>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <p><strong>Téléphone :</strong><br>
+              <i class="fas fa-phone"></i> <%= @cabinet.telephone || "Non renseigné" %></p>
+            </div>
+            <div class="col-md-6">
+              <p><strong>Email :</strong><br>
+              <i class="fas fa-envelope"></i> <%= @cabinet.email || "Non renseigné" %></p>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="row text-center">
+            <div class="col-md-4">
+              <div class="card bg-light">
+                <div class="card-body">
+                  <h4 class="text-primary"><%= @cabinet.medecins.count %></h4>
+                  <p class="text-muted mb-0">Médecins</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card bg-light">
+                <div class="card-body">
+                  <h4 class="text-success"><%= @cabinet.secretaires.count %></h4>
+                  <p class="text-muted mb-0">Secrétaires</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card bg-light">
+                <div class="card-body">
+                  <h4 class="text-info"><%= @cabinet.patients.count %></h4>
+                  <p class="text-muted mb-0">Patients</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <%= link_to "Retour à l'accueil", root_path, class: "btn btn-secondary" %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

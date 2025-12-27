@@ -1,0 +1,149 @@
+<div class="container-fluid mt-4">
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <h2><i class="fas fa-users"></i> Liste des Patients</h2>
+      <p class="text-muted"><%= @patients.size %> patient(s)</p>
+    </div>
+    <div class="col-md-6 text-end">
+      <%= link_to new_patient_path, class: "btn btn-success btn-lg" do %>
+        <i class="fas fa-plus"></i> Ajouter un patient
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Recherche et filtres -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <%= form_with url: patients_path, method: :get, class: "row g-3" do |f| %>
+        <div class="col-md-4">
+          <%= f.text_field :search, 
+                          value: params[:search],
+                          class: "form-control", 
+                          placeholder: "Rechercher (nom, prénom, téléphone, dossier)" %>
+        </div>
+        <div class="col-md-2">
+          <%= f.select :civilite, 
+                      options_for_select(Patient::CIVILITES, params[:civilite]), 
+                      { include_blank: "Civilité" },
+                      class: "form-select" %>
+        </div>
+        <div class="col-md-2">
+          <%= f.select :sexe, 
+                      options_for_select(Patient::SEXES, params[:sexe]), 
+                      { include_blank: "Sexe" },
+                      class: "form-select" %>
+        </div>
+        <div class="col-md-2">
+          <%= f.select :situation_familiale, 
+                      options_for_select(Patient::SITUATIONS_FAMILIALES, params[:situation_familiale]), 
+                      { include_blank: "Situation" },
+                      class: "form-select" %>
+        </div>
+        <div class="col-md-2">
+          <%= f.submit "Filtrer", class: "btn btn-primary w-100" %>
+          <%= link_to "Réinitialiser", patients_path, class: "btn btn-secondary w-100 mt-2" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Table des patients -->
+  <div class="card shadow">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover table-striped mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th>N° Dossier</th>
+              <th>Nom Complet</th>
+              <th>Téléphone</th>
+              <th>Date Naissance</th>
+              <th>Âge</th>
+              <th>Ville</th>
+              <th>Mutuelle</th>
+              <th>Status</th>
+              <% if current_user.medecin_or_owner? %>
+                <th>Comptes Rendus</th>
+              <% end %>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if @patients.any? %>
+              <% @patients.each do |patient| %>
+                <tr>
+                  <td><strong><%= patient.numero_dossier %></strong></td>
+                  <td>
+                    <%= patient.nom_complet %>
+                    <% if patient.sexe.present? %>
+                      <span class="badge bg-<%= patient.sexe == 'Homme' ? 'info' : 'danger' %>">
+                        <%= patient.sexe %>
+                      </span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <i class="fas fa-phone"></i>
+                    <%= patient.telephone_complet %>
+                  </td>
+                  <td><%= patient.date_naissance&.strftime("%d/%m/%Y") %></td>
+                  <td>
+                    <% if patient.age %>
+                      <span class="badge bg-secondary"><%= patient.age %> ans</span>
+                    <% end %>
+                  </td>
+                  <td><%= patient.ville %></td>
+                  <td><%= patient.mutuelle %></td>
+                  <td>
+                    <% if patient.lead_status.present? %>
+                      <span class="badge bg-<%= patient.lead_status == 'Actif' ? 'success' : 'warning' %>">
+                        <%= patient.lead_status %>
+                      </span>
+                    <% end %>
+                  </td>
+                  <% if current_user.medecin_or_owner? %>
+                    <td>
+                      <% consultations_count = patient.appointments.joins(:consultation).count %>
+                      <% if consultations_count > 0 %>
+                        <span class="badge bg-success" title="<%= consultations_count %> compte(s) rendu(s)">
+                          <i class="fas fa-file-medical"></i> <%= consultations_count %>
+                        </span>
+                        <%= link_to "Voir", patient_path(patient, anchor: 'consultations'), class: "btn btn-sm btn-outline-success ms-1", title: "Voir les comptes rendus" %>
+                      <% else %>
+                        <span class="text-muted">—</span>
+                      <% end %>
+                    </td>
+                  <% end %>
+                  <td>
+                    <div class="btn-group" role="group">
+                      <%= link_to patient_path(patient), class: "btn btn-sm btn-info", title: "Voir" do %>
+                        <i class="fas fa-eye"></i>
+                      <% end %>
+                      <%= link_to edit_patient_path(patient), class: "btn btn-sm btn-warning", title: "Modifier" do %>
+                        <i class="fas fa-edit"></i>
+                      <% end %>
+                      <%= link_to patient_path(patient), 
+                                  method: :delete, 
+                                  data: { confirm: "Êtes-vous sûr de vouloir supprimer ce patient ?" },
+                                  class: "btn btn-sm btn-danger",
+                                  title: "Supprimer" do %>
+                        <i class="fas fa-trash"></i>
+                      <% end %>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            <% else %>
+              <tr>
+                <td colspan="<%= current_user.medecin_or_owner? ? '10' : '9' %>" class="text-center py-5">
+                  <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+                  <p class="text-muted">Aucun patient trouvé</p>
+                  <%= link_to "Ajouter le premier patient", new_patient_path, class: "btn btn-primary" %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

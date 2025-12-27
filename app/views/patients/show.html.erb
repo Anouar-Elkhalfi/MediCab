@@ -1,0 +1,245 @@
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-12">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <%= link_to patients_path, class: "btn btn-secondary" do %>
+          <i class="fas fa-arrow-left"></i> Retour à la liste
+        <% end %>
+        <div>
+          <%= link_to edit_patient_path(@patient), class: "btn btn-warning" do %>
+            <i class="fas fa-edit"></i> Modifier
+          <% end %>
+          <%= link_to patient_path(@patient), 
+                      method: :delete, 
+                      data: { confirm: "Êtes-vous sûr ?" },
+                      class: "btn btn-danger" do %>
+            <i class="fas fa-trash"></i> Supprimer
+          <% end %>
+        </div>
+      </div>
+
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+          <h3 class="mb-0">
+            <i class="fas fa-user"></i> 
+            <%= @patient.nom_complet %>
+          </h3>
+          <p class="mb-0 text-white-50">
+            Dossier N° <%= @patient.numero_dossier %> 
+            <% if @patient.age %>
+              • <%= @patient.age %> ans
+            <% end %>
+          </p>
+        </div>
+        <div class="card-body p-4">
+          <!-- Informations personnelles -->
+          <h5 class="text-primary mb-3">
+            <i class="fas fa-id-card"></i> Informations personnelles
+          </h5>
+          <div class="row mb-4">
+            <div class="col-md-3">
+              <strong>Civilité:</strong><br>
+              <%= @patient.civilite || "Non renseigné" %>
+            </div>
+            <div class="col-md-3">
+              <strong>Nom:</strong><br>
+              <%= @patient.nom %>
+            </div>
+            <div class="col-md-3">
+              <strong>Prénom:</strong><br>
+              <%= @patient.prenom %>
+            </div>
+            <div class="col-md-3">
+              <strong>Sexe:</strong><br>
+              <% if @patient.sexe %>
+                <span class="badge bg-<%= @patient.sexe == 'Homme' ? 'info' : 'danger' %>">
+                  <%= @patient.sexe %>
+                </span>
+              <% else %>
+                Non renseigné
+              <% end %>
+            </div>
+          </div>
+
+          <div class="row mb-4">
+            <div class="col-md-4">
+              <strong>Date de naissance:</strong><br>
+              <%= @patient.date_naissance&.strftime("%d/%m/%Y") || "Non renseigné" %>
+            </div>
+            <div class="col-md-4">
+              <strong>CIN:</strong><br>
+              <%= @patient.cin || "Non renseigné" %>
+            </div>
+            <div class="col-md-4">
+              <strong>Profession:</strong><br>
+              <%= @patient.profession || "Non renseigné" %>
+            </div>
+          </div>
+
+          <hr>
+
+          <!-- Contact -->
+          <h5 class="text-primary mb-3">
+            <i class="fas fa-phone"></i> Contact
+          </h5>
+          <div class="row mb-4">
+            <div class="col-md-4">
+              <strong>Téléphone:</strong><br>
+              <i class="fas fa-phone"></i> <%= @patient.telephone_complet %>
+            </div>
+            <div class="col-md-4">
+              <strong>Ville:</strong><br>
+              <%= @patient.ville || "Non renseigné" %>
+            </div>
+            <div class="col-md-4">
+              <strong>Provenance:</strong><br>
+              <%= @patient.provenance || "Non renseigné" %>
+            </div>
+          </div>
+
+          <div class="row mb-4">
+            <div class="col-md-12">
+              <strong>Adresse:</strong><br>
+              <%= simple_format(@patient.adresse) || "Non renseigné" %>
+            </div>
+          </div>
+
+          <hr>
+
+          <!-- Informations médicales -->
+          <h5 class="text-primary mb-3">
+            <i class="fas fa-heartbeat"></i> Informations médicales & administratives
+          </h5>
+          <div class="row mb-4">
+            <div class="col-md-4">
+              <strong>Situation familiale:</strong><br>
+              <%= @patient.situation_familiale || "Non renseigné" %>
+            </div>
+            <div class="col-md-4">
+              <strong>Mutuelle:</strong><br>
+              <%= @patient.mutuelle || "Non renseigné" %>
+            </div>
+            <div class="col-md-4">
+              <strong>Immatriculation:</strong><br>
+              <%= @patient.immatriculation || "Non renseigné" %>
+            </div>
+          </div>
+
+          <div class="row mb-4">
+            <div class="col-md-12">
+              <strong>Lead Status:</strong><br>
+              <% if @patient.lead_status.present? %>
+                <span class="badge bg-<%= @patient.lead_status == 'Actif' ? 'success' : 'warning' %> fs-6">
+                  <%= @patient.lead_status %>
+                </span>
+              <% else %>
+                Non renseigné
+              <% end %>
+            </div>
+          </div>
+
+          <% if @patient.commentaire.present? %>
+            <hr>
+            <h5 class="text-primary mb-3">
+              <i class="fas fa-comment"></i> Commentaire
+            </h5>
+            <div class="alert alert-info">
+              <%= simple_format(@patient.commentaire) %>
+            </div>
+          <% end %>
+
+          <hr>
+
+          <!-- Métadonnées -->
+          <div class="row text-muted">
+            <div class="col-md-6">
+              <small>
+                <i class="fas fa-calendar-plus"></i>
+                Créé le <%= @patient.created_at.strftime("%d/%m/%Y à %H:%M") %>
+              </small>
+            </div>
+            <div class="col-md-6 text-end">
+              <small>
+                <i class="fas fa-calendar-check"></i>
+                Mis à jour le <%= @patient.updated_at.strftime("%d/%m/%Y à %H:%M") %>
+              </small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comptes rendus médicaux (uniquement pour les médecins) -->
+      <% if current_user.medecin_or_owner? %>
+        <div class="card shadow mt-4" id="consultations">
+          <div class="card-header bg-success text-white">
+            <h4 class="mb-0">
+              <i class="fas fa-file-medical"></i> Comptes Rendus Médicaux
+            </h4>
+          </div>
+          <div class="card-body">
+            <% consultations = @patient.appointments.includes(:consultation).where.not(consultations: { id: nil }).order('appointments.date_rdv DESC, appointments.heure_debut DESC') %>
+            
+            <% if consultations.any? %>
+              <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong><%= consultations.size %></strong> compte(s) rendu(s) enregistré(s) pour ce patient
+              </div>
+
+              <% consultations.each_with_index do |appointment, index| %>
+                <div class="card mb-3">
+                  <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                      <strong>Consultation du <%= appointment.date_rdv.strftime("%d/%m/%Y") %> à <%= appointment.heure_debut.strftime("%H:%M") %></strong>
+                      <br>
+                      <small class="text-muted">
+                        Dr <%= appointment.medecin.full_name %> • 
+                        Créé le <%= appointment.consultation.created_at.strftime("%d/%m/%Y à %H:%M") %>
+                      </small>
+                    </div>
+                    <%= link_to "Voir le détail", appointment_consultation_path(appointment, appointment.consultation), class: "btn btn-success btn-sm" %>
+                  </div>
+                  <div class="card-body">
+                    <div class="row">
+                      <div class="col-md-12 mb-3">
+                        <h6 class="text-success"><i class="fas fa-stethoscope"></i> Diagnostic</h6>
+                        <p class="mb-0"><%= simple_format(appointment.consultation.diagnostic) %></p>
+                      </div>
+                      
+                      <% if appointment.consultation.traitement.present? %>
+                        <div class="col-md-6 mb-3">
+                          <h6 class="text-primary"><i class="fas fa-pills"></i> Traitement</h6>
+                          <p class="mb-0"><%= simple_format(appointment.consultation.traitement) %></p>
+                        </div>
+                      <% end %>
+                      
+                      <% if appointment.consultation.observations.present? %>
+                        <div class="col-md-6 mb-3">
+                          <h6 class="text-info"><i class="fas fa-clipboard"></i> Observations</h6>
+                          <p class="mb-0"><%= simple_format(appointment.consultation.observations) %></p>
+                        </div>
+                      <% end %>
+                      
+                      <% if appointment.consultation.prochain_rdv.present? %>
+                        <div class="col-md-12">
+                          <div class="alert alert-success mb-0">
+                            <i class="fas fa-calendar-check"></i>
+                            <strong>Prochain RDV:</strong> <%= appointment.consultation.prochain_rdv.strftime("%d/%m/%Y") %>
+                          </div>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+            <% else %>
+              <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                Aucun compte rendu médical enregistré pour ce patient.
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
