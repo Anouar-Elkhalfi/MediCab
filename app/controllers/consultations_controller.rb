@@ -60,7 +60,9 @@ class ConsultationsController < ApplicationController
 
   def consultation_params
     params.require(:consultation).permit(
-      :diagnostic, :traitement, :observations, :ordonnance, :prochain_rdv
+      :motif, :antecedents, :examen_clinique, :examens_complementaires,
+      :diagnostic, :conclusion, :traitement, :ordonnance,
+      :observations, :notes_internes, :prochain_rdv
     )
   end
 

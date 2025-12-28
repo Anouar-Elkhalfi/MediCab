@@ -26,8 +26,46 @@
             <%= f.error_notification %>
             <%= f.error_notification message: f.object.errors[:base].to_sentence if f.object.errors[:base].present? %>
 
+            <!-- Section 1: Motif et Antécédents -->
+            <h5 class="text-primary mt-3 mb-3"><i class="fas fa-clipboard-list"></i> Informations Générales</h5>
             <div class="row">
-              <!-- Colonne gauche -->
+              <div class="col-md-6">
+                <%= f.input :motif,
+                           as: :text,
+                           label: "Motif de consultation *",
+                           input_html: { class: 'form-control', rows: 3 },
+                           hint: "Raison de la visite du patient",
+                           required: true %>
+              </div>
+              <div class="col-md-6">
+                <%= f.input :antecedents,
+                           as: :text,
+                           label: "Antécédents médicaux",
+                           input_html: { class: 'form-control', rows: 3 },
+                           hint: "Antécédents personnels et familiaux",
+                           required: false %>
+              </div>
+            </div>
+
+            <!-- Section 2: Examen et Diagnostic -->
+            <h5 class="text-success mt-4 mb-3"><i class="fas fa-stethoscope"></i> Examen et Diagnostic</h5>
+            <div class="row">
+              <div class="col-md-6">
+                <%= f.input :examen_clinique,
+                           as: :text,
+                           label: "Examen clinique",
+                           input_html: { class: 'form-control', rows: 5 },
+                           hint: "Constats lors de l'examen physique",
+                           required: false %>
+
+                <%= f.input :examens_complementaires,
+                           as: :text,
+                           label: "Examens complémentaires",
+                           input_html: { class: 'form-control', rows: 3 },
+                           hint: "Analyses, radiographies, etc.",
+                           required: false %>
+              </div>
+
               <div class="col-md-6">
                 <%= f.input :diagnostic,
                            as: :text,
@@ -36,6 +74,19 @@
                            hint: "Diagnostic médical de la consultation",
                            required: true %>
 
+                <%= f.input :conclusion,
+                           as: :text,
+                           label: "Conclusion",
+                           input_html: { class: 'form-control', rows: 3 },
+                           hint: "Conclusion du diagnostic",
+                           required: false %>
+              </div>
+            </div>
+
+            <!-- Section 3: Traitement et Suivi -->
+            <h5 class="text-info mt-4 mb-3"><i class="fas fa-pills"></i> Traitement et Suivi</h5>
+            <div class="row">
+              <div class="col-md-6">
                 <%= f.input :traitement,
                            as: :text,
                            label: "Traitement prescrit",
@@ -43,15 +94,14 @@
                            hint: "Médicaments et posologie",
                            required: false %>
 
-                <%= f.input :prochain_rdv,
-                           as: :date,
-                           html5: true,
-                           label: "Prochain RDV (optionnel)",
-                           input_html: { class: 'form-control' },
+                <%= f.input :ordonnance,
+                           as: :text,
+                           label: "Ordonnance détaillée",
+                           input_html: { class: 'form-control', rows: 5 },
+                           hint: "Détail de l'ordonnance médicale",
                            required: false %>
               </div>
 
-              <!-- Colonne droite -->
               <div class="col-md-6">
                 <%= f.input :observations,
                            as: :text,
@@ -60,11 +110,18 @@
                            hint: "Notes cliniques, recommandations",
                            required: false %>
 
-                <%= f.input :ordonnance,
+                <%= f.input :notes_internes,
                            as: :text,
-                           label: "Ordonnance détaillée",
-                           input_html: { class: 'form-control', rows: 7 },
-                           hint: "Détail de l'ordonnance médicale",
+                           label: "Notes internes",
+                           input_html: { class: 'form-control', rows: 3 },
+                           hint: "Notes confidentielles (non visibles sur ordonnance)",
+                           required: false %>
+
+                <%= f.input :prochain_rdv,
+                           as: :date,
+                           html5: true,
+                           label: "Prochain RDV (optionnel)",
+                           input_html: { class: 'form-control' },
                            required: false %>
               </div>
             </div>

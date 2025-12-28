@@ -4,6 +4,7 @@ class Patient < ApplicationRecord
   # Relations
   belongs_to :user, optional: true
   has_many :appointments, dependent: :destroy
+  has_many :consultations, through: :appointments
 
   # Validations
   validates :nom, :prenom, presence: true
@@ -45,6 +46,14 @@ class Patient < ApplicationRecord
     age = today.year - date_naissance.year
     age -= 1 if today < date_naissance + age.years
     age
+  end
+
+  def nombre_consultations
+    consultations.count
+  end
+
+  def derniere_consultation
+    consultations.joins(:appointment).order('appointments.date_rdv DESC').first
   end
 
   def telephone_complet

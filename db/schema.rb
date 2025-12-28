@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_27_150001) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_28_145446) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -76,6 +76,12 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_27_150001) do
     t.date "prochain_rdv"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "motif"
+    t.text "antecedents"
+    t.text "examen_clinique"
+    t.text "conclusion"
+    t.text "examens_complementaires"
+    t.text "notes_internes"
     t.index ["appointment_id"], name: "index_consultations_on_appointment_id"
   end
 

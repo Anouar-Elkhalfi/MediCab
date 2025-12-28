@@ -37,40 +37,106 @@
             </div>
           </div>
 
-          <!-- Diagnostic -->
-          <div class="mb-4">
-            <h5 class="text-success"><i class="fas fa-stethoscope"></i> Diagnostic</h5>
-            <div class="p-3 bg-light rounded">
-              <%= simple_format(@consultation.diagnostic) %>
-            </div>
-          </div>
-
-          <!-- Traitement -->
-          <% if @consultation.traitement.present? %>
-            <div class="mb-4">
-              <h5 class="text-primary"><i class="fas fa-pills"></i> Traitement prescrit</h5>
-              <div class="p-3 bg-light rounded">
-                <%= simple_format(@consultation.traitement) %>
-              </div>
+          <!-- Section 1: Motif et Antécédents -->
+          <% if @consultation.motif.present? || @consultation.antecedents.present? %>
+            <h5 class="text-primary border-bottom pb-2 mb-3"><i class="fas fa-clipboard-list"></i> Informations Générales</h5>
+            <div class="row mb-4">
+              <% if @consultation.motif.present? %>
+                <div class="col-md-6 mb-3">
+                  <h6 class="text-primary"><i class="fas fa-question-circle"></i> Motif de consultation</h6>
+                  <div class="p-3 bg-light rounded">
+                    <%= simple_format(@consultation.motif) %>
+                  </div>
+                </div>
+              <% end %>
+              
+              <% if @consultation.antecedents.present? %>
+                <div class="col-md-6 mb-3">
+                  <h6 class="text-primary"><i class="fas fa-history"></i> Antécédents médicaux</h6>
+                  <div class="p-3 bg-light rounded">
+                    <%= simple_format(@consultation.antecedents) %>
+                  </div>
+                </div>
+              <% end %>
             </div>
           <% end %>
+
+          <!-- Section 2: Examen et Diagnostic -->
+          <h5 class="text-success border-bottom pb-2 mb-3"><i class="fas fa-stethoscope"></i> Examen et Diagnostic</h5>
+          <div class="row mb-4">
+            <% if @consultation.examen_clinique.present? %>
+              <div class="col-md-6 mb-3">
+                <h6 class="text-success"><i class="fas fa-user-md"></i> Examen clinique</h6>
+                <div class="p-3 bg-light rounded">
+                  <%= simple_format(@consultation.examen_clinique) %>
+                </div>
+              </div>
+            <% end %>
+
+            <% if @consultation.examens_complementaires.present? %>
+              <div class="col-md-6 mb-3">
+                <h6 class="text-success"><i class="fas fa-vial"></i> Examens complémentaires</h6>
+                <div class="p-3 bg-light rounded">
+                  <%= simple_format(@consultation.examens_complementaires) %>
+                </div>
+              </div>
+            <% end %>
+
+            <div class="col-md-6 mb-3">
+              <h6 class="text-success"><i class="fas fa-diagnoses"></i> Diagnostic</h6>
+              <div class="p-3 bg-success bg-opacity-10 rounded border border-success">
+                <strong><%= simple_format(@consultation.diagnostic) %></strong>
+              </div>
+            </div>
+
+            <% if @consultation.conclusion.present? %>
+              <div class="col-md-6 mb-3">
+                <h6 class="text-success"><i class="fas fa-check-circle"></i> Conclusion</h6>
+                <div class="p-3 bg-light rounded">
+                  <%= simple_format(@consultation.conclusion) %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+
+          <!-- Section 3: Traitement et Suivi -->
+          <h5 class="text-info border-bottom pb-2 mb-3"><i class="fas fa-pills"></i> Traitement et Suivi</h5>
+          <div class="row mb-4">
+            <% if @consultation.traitement.present? %>
+              <div class="col-md-6 mb-3">
+                <h6 class="text-info"><i class="fas fa-prescription-bottle"></i> Traitement prescrit</h6>
+                <div class="p-3 bg-light rounded">
+                  <%= simple_format(@consultation.traitement) %>
+                </div>
+              </div>
+            <% end %>
+
+            <% if @consultation.ordonnance.present? %>
+              <div class="col-md-6 mb-3">
+                <h6 class="text-warning"><i class="fas fa-file-prescription"></i> Ordonnance détaillée</h6>
+                <div class="p-3 bg-warning bg-opacity-10 rounded border border-warning">
+                  <%= simple_format(@consultation.ordonnance) %>
+                </div>
+              </div>
+            <% end %>
+          </div>
 
           <!-- Observations -->
           <% if @consultation.observations.present? %>
             <div class="mb-4">
-              <h5 class="text-info"><i class="fas fa-clipboard"></i> Observations</h5>
+              <h6 class="text-info"><i class="fas fa-clipboard"></i> Observations</h6>
               <div class="p-3 bg-light rounded">
                 <%= simple_format(@consultation.observations) %>
               </div>
             </div>
           <% end %>
 
-          <!-- Ordonnance -->
-          <% if @consultation.ordonnance.present? %>
+          <!-- Notes internes (visibles uniquement pour les médecins) -->
+          <% if @consultation.notes_internes.present? %>
             <div class="mb-4">
-              <h5 class="text-warning"><i class="fas fa-file-prescription"></i> Ordonnance détaillée</h5>
-              <div class="p-3 bg-light rounded border border-warning">
-                <%= simple_format(@consultation.ordonnance) %>
+              <h6 class="text-secondary"><i class="fas fa-lock"></i> Notes internes (confidentielles)</h6>
+              <div class="p-3 bg-secondary bg-opacity-10 rounded border border-secondary">
+                <%= simple_format(@consultation.notes_internes) %>
               </div>
             </div>
           <% end %>
