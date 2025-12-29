@@ -150,25 +150,29 @@ class AppointmentsController < ApplicationController
     @appointment = current_cabinet.appointments.find(params[:id])
     authorize @appointment
     
-    case params[:new_status]
-    when 'marquer_arrive'
-      @appointment.marquer_arrive!
+    # Gérer les deux formats de paramètres (ancien et nouveau)
+    new_status = params[:new_status] || params.dig(:appointment, :statut)
+    
+    case new_status
+    when 'marquer_arrive', 'en_salle_attente'
+      @appointment.update(statut: :en_salle_attente, heure_arrivee: Time.current)
     when 'appeler'
       @appointment.appeler!
     when 'commencer'
       @appointment.commencer_consultation!
-    when 'terminer'
-      @appointment.terminer_consultation!
-    when 'encaisser'
-      @appointment.marquer_encaisse!
+    when 'terminer', 'vu'
+      @appointment.update(statut: :vu)
+    when 'encaisser', 'encaisse'
+      @appointment.update(statut: :encaisse)
     when 'absent'
-      @appointment.marquer_absent!
-    when 'annuler'
-      @appointment.annuler!(params[:raison])
+      @appointment.update(statut: :absent)
+    when 'annuler', 'annule'
+      @appointment.update(statut: :annule, raison_annulation: params[:raison])
     end
     
     respond_to do |format|
-      format.html { redirect_back(fallback_location: waiting_list_appointments_path, notice: 'Statut mis à jour.') }
+      format.html { redirect_back(fallback_location: calendar_appointments_path, notice: 'Statut mis à jour.') }
+      format.json { render json: { success: true, message: 'Statut mis à jour' } }
       format.turbo_stream
     end
   end

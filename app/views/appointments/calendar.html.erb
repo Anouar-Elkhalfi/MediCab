@@ -183,40 +183,118 @@
                 
                 <% appointments_at_time.each do |appointment| %>
                   <% duration_slots = (appointment.duree / 30.0).ceil %>
-                  <%= link_to appointment_path(appointment), 
-                      class: "appointment-card status-#{appointment.statut}", 
-                      style: "height: #{duration_slots * 100}%;",
-                      title: appointment.patient.nom_complet,
-                      draggable: true,
-                      data: { 
-                        turbo: false,
-                        appointment_id: appointment.id,
-                        current_date: appointment.date_rdv,
-                        current_time: appointment.heure_debut.strftime('%H:%M')
-                      } do %>
+                  <a href="#" 
+                      class="appointment-card status-#{appointment.statut}" 
+                      style="height: #{duration_slots * 100}%;"
+                      title="<%= appointment.patient.nom_complet %>"
+                      draggable="true"
+                      data-appointment-id="<%= appointment.id %>"
+                      data-current-date="<%= appointment.date_rdv %>"
+                      data-current-time="<%= appointment.heure_debut.strftime('%H:%M') %>"
+                      data-patient-name="<%= appointment.patient.nom_complet %>"
+                      data-patient-phone="<%= appointment.patient.telephone %>"
+                      data-medecin-name="Dr <%= appointment.medecin.last_name %>"
+                      data-time-start="<%= appointment.heure_debut.strftime('%H:%M') %>"
+                      data-time-end="<%= appointment.heure_fin.strftime('%H:%M') %>"
+                      data-motif="<%= appointment.motif %>"
+                      data-statut="<%= appointment.statut %>"
+                      data-statut-label="<%= Appointment::STATUT_LABELS[appointment.statut] %>"
+                      onclick="openAppointmentModal(event, this); return false;">
                     <div class="appointment-time"><%= appointment.heure_debut.strftime('%H:%M') %></div>
                     <div class="appointment-patient"><%= appointment.patient.nom.upcase %> <%= appointment.patient.prenom %></div>
                     <% if appointment.motif.present? %>
                       <div class="appointment-motif"><%= truncate(appointment.motif, length: 30) %></div>
                     <% end %>
-                    <div class="appointment-actions">
-                      <% if policy(appointment).change_status? %>
-                        <%= button_to change_status_appointment_path(appointment), 
-                            method: :patch, 
-                            params: { appointment: { statut: :en_salle_attente } },
-                            class: "btn btn-sm btn-light btn-action",
-                            title: "Marquer comme arrivé",
-                            onclick: "event.stopPropagation(); return confirm('Marquer comme arrivé ?');" do %>
-                          <i class="fas fa-check"></i>
-                        <% end %>
-                      <% end %>
-                    </div>
-                  <% end %>
+                  </a>
                 <% end %>
               </div>
             <% end %>
           </div>
         <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal pour actions rapides sur RDV -->
+<div class="modal fade" id="appointmentQuickModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-calendar-check"></i> 
+          <span id="modal-patient-name"></span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <div class="row">
+            <div class="col-6">
+              <small class="text-muted">Patient</small>
+              <div class="fw-bold" id="modal-patient-full"></div>
+            </div>
+            <div class="col-6">
+              <small class="text-muted">Téléphone</small>
+              <div id="modal-patient-phone"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          <div class="row">
+            <div class="col-6">
+              <small class="text-muted">Horaire</small>
+              <div class="fw-bold" id="modal-time"></div>
+            </div>
+            <div class="col-6">
+              <small class="text-muted">Médecin</small>
+              <div id="modal-medecin"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-3" id="modal-motif-container">
+          <small class="text-muted">Motif</small>
+          <div id="modal-motif"></div>
+        </div>
+        
+        <div class="mb-3">
+          <small class="text-muted">Statut actuel</small>
+          <div>
+            <span class="badge" id="modal-current-status"></span>
+          </div>
+        </div>
+        
+        <hr>
+        
+        <div class="mb-2">
+          <strong><i class="fas fa-exchange-alt"></i> Changer le statut :</strong>
+        </div>
+        
+        <div class="d-grid gap-2">
+          <button type="button" class="btn btn-outline-warning" onclick="changeAppointmentStatus('en_salle_attente')">
+            <i class="fas fa-clock"></i> En salle d'attente
+          </button>
+          <button type="button" class="btn btn-outline-success" onclick="changeAppointmentStatus('vu')">
+            <i class="fas fa-check-circle"></i> Consultation terminée
+          </button>
+          <button type="button" class="btn btn-outline-dark" onclick="changeAppointmentStatus('encaisse')">
+            <i class="fas fa-euro-sign"></i> Encaissé
+          </button>
+          <button type="button" class="btn btn-outline-info" onclick="changeAppointmentStatus('absent')">
+            <i class="fas fa-user-times"></i> Absent
+          </button>
+          <button type="button" class="btn btn-outline-secondary" onclick="changeAppointmentStatus('annule')">
+            <i class="fas fa-ban"></i> Annuler
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+        <a href="#" id="modal-view-link" class="btn btn-primary" target="_blank">
+          <i class="fas fa-eye"></i> Voir détails
+        </a>
       </div>
     </div>
   </div>
@@ -792,4 +870,104 @@
   // Initialiser au chargement
   document.addEventListener('DOMContentLoaded', initDragAndDrop);
   document.addEventListener('turbo:load', initDragAndDrop);
+  
+  // ========== MODAL ACTIONS RAPIDES ==========
+  let currentAppointmentId = null;
+  
+  function openAppointmentModal(event, element) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // Récupérer les données du RDV
+    currentAppointmentId = element.dataset.appointmentId;
+    const patientName = element.dataset.patientName;
+    const patientPhone = element.dataset.patientPhone;
+    const medecinName = element.dataset.medecinName;
+    const timeStart = element.dataset.timeStart;
+    const timeEnd = element.dataset.timeEnd;
+    const motif = element.dataset.motif;
+    const statut = element.dataset.statut;
+    const statutLabel = element.dataset.statutLabel;
+    
+    // Remplir la modal
+    document.getElementById('modal-patient-name').textContent = patientName;
+    document.getElementById('modal-patient-full').textContent = patientName;
+    document.getElementById('modal-patient-phone').textContent = patientPhone;
+    document.getElementById('modal-medecin').textContent = medecinName;
+    document.getElementById('modal-time').textContent = `${timeStart} - ${timeEnd}`;
+    
+    // Motif
+    if (motif && motif !== '') {
+      document.getElementById('modal-motif').textContent = motif;
+      document.getElementById('modal-motif-container').style.display = 'block';
+    } else {
+      document.getElementById('modal-motif-container').style.display = 'none';
+    }
+    
+    // Statut actuel avec couleur
+    const statusBadge = document.getElementById('modal-current-status');
+    statusBadge.textContent = statutLabel;
+    statusBadge.className = 'badge bg-' + getStatusColor(statut);
+    
+    // Lien vers détails
+    document.getElementById('modal-view-link').href = `/appointments/${currentAppointmentId}`;
+    
+    // Ouvrir la modal
+    const modal = new bootstrap.Modal(document.getElementById('appointmentQuickModal'));
+    modal.show();
+  }
+  
+  function getStatusColor(statut) {
+    const colors = {
+      'a_venir': 'pink',
+      'en_salle_attente': 'warning',
+      'vu': 'success',
+      'encaisse': 'dark',
+      'absent': 'info',
+      'annule': 'secondary'
+    };
+    return colors[statut] || 'secondary';
+  }
+  
+  function changeAppointmentStatus(newStatus) {
+    if (!currentAppointmentId) return;
+    
+    // Confirmation
+    const statusLabels = {
+      'en_salle_attente': 'En salle d\'attente',
+      'vu': 'Consultation terminée',
+      'encaisse': 'Encaissé',
+      'absent': 'Absent',
+      'annule': 'Annulé'
+    };
+    
+    if (!confirm(`Changer le statut en "${statusLabels[newStatus]}" ?`)) {
+      return;
+    }
+    
+    // Envoyer la requête
+    fetch(`/appointments/${currentAppointmentId}/change_status`, {
+      method: 'PATCH',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+      },
+      body: JSON.stringify({
+        appointment: { statut: newStatus }
+      })
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Erreur lors du changement de statut');
+      }
+      // Fermer la modal et forcer un vrai rechargement (bypass Turbo cache)
+      bootstrap.Modal.getInstance(document.getElementById('appointmentQuickModal')).hide();
+      window.location.href = window.location.href;
+    })
+    .catch(error => {
+      console.error('Erreur:', error);
+      alert('❌ Erreur lors du changement de statut');
+    });
+  }
 </script>
