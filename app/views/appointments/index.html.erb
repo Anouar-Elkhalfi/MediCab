@@ -4,7 +4,7 @@
       <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Tous les Rendez-vous</h2>
         <div>
-          <%= link_to "Calendrier", calendar_appointments_path, class: "btn btn-primary me-2" %>
+          <%= link_to "Calendrier", calendar_appointments_path, class: "btn btn-primary me-2", data: { turbo: false } %>
           <%= link_to "Liste d'attente", waiting_list_appointments_path, class: "btn btn-warning me-2" %>
           <%= link_to "Nouveau RDV", new_appointment_path, class: "btn btn-success" %>
         </div>

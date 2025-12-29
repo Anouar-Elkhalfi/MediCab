@@ -7,6 +7,14 @@ class AppointmentPolicy < ApplicationPolicy
     user.present? && (user.secretaire_or_above? || user.medecin_or_owner?)
   end
 
+  def calendar_view?
+    user.present? && (user.secretaire_or_above? || user.medecin_or_owner?)
+  end
+
+  def events_json?
+    user.present? && (user.secretaire_or_above? || user.medecin_or_owner?)
+  end
+
   def waiting_list?
     user.present? && (user.secretaire_or_above? || user.medecin_or_owner?)
   end
@@ -36,6 +44,10 @@ class AppointmentPolicy < ApplicationPolicy
   end
 
   def change_status?
+    user.present? && (user.secretaire_or_above? || user.medecin_or_owner?)
+  end
+
+  def update_date?
     user.present? && (user.secretaire_or_above? || user.medecin_or_owner?)
   end
 

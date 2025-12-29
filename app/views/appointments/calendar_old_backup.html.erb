@@ -1,0 +1,173 @@
+<div class="container-fluid mt-4">
+  <!-- En-tête avec recherche et filtres -->
+  <div class="row mb-3">
+    <div class="col-md-8">
+      <h2 class="mb-0">
+        <% if @selected_medecin %>
+          <%= @selected_medecin.medecin_or_owner? ? "Dr #{@selected_medecin.last_name} #{@selected_medecin.first_name}" : @selected_medecin.email %>
+        <% end %>
+      </h2>
+      <p class="text-muted">
+        Semaine du <%= l(@start_date, format: :long) %> au <%= l(@end_date, format: :long) %>
+      </p>
+    </div>
+    <div class="col-md-4 text-end">
+      <%= link_to "Liste d'attente", waiting_list_appointments_path, class: "btn btn-warning me-2" %>
+      <%= link_to "+ Nouveau RDV", new_appointment_path(date: @date, medecin_id: @selected_medecin&.id), class: "btn btn-primary" %>
+    </div>
+  </div>
+
+  <!-- Barre de recherche et filtres -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <%= form_with url: calendar_appointments_path, method: :get, local: true, class: "row g-3" do |f| %>
+        <div class="col-md-4">
+          <%= f.text_field :search, 
+                          value: params[:search],
+                          class: "form-control", 
+                          placeholder: "Rechercher par numéro de dossier, nom ou téléphone" %>
+        </div>
+        
+        <div class="col-md-3">
+          <%= f.select :medecin_id, 
+                      options_from_collection_for_select(@medecins, :id, ->(m) { "Dr #{m.last_name} #{m.first_name}" }, @selected_medecin&.id),
+                      { prompt: "Tous les médecins" },
+                      class: "form-select" %>
+        </div>
+        
+        <div class="col-md-2">
+          <%= f.select :view,
+                      [["Semaine (6J)", "6j"], ["Semaine (7J)", "7j"]],
+                      { selected: params[:view] || "6j" },
+                      class: "form-select" %>
+        </div>
+        
+        <div class="col-md-3">
+          <div class="btn-group w-100">
+            <%= link_to "← Semaine précédente", 
+                        calendar_appointments_path(date: @start_date - 1.week, medecin_id: @selected_medecin&.id, view: params[:view]),
+                        class: "btn btn-outline-secondary" %>
+            <%= link_to "Aujourd'hui", 
+                        calendar_appointments_path(date: Date.today, medecin_id: @selected_medecin&.id, view: params[:view]),
+                        class: "btn btn-outline-primary" %>
+            <%= link_to "Semaine suivante →", 
+                        calendar_appointments_path(date: @start_date + 1.week, medecin_id: @selected_medecin&.id, view: params[:view]),
+                        class: "btn btn-outline-secondary" %>
+          </div>
+        </div>
+        
+        <div class="col-12">
+          <%= f.submit "Rechercher", class: "btn btn-primary" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Légende des statuts -->
+  <div class="card mb-3">
+    <div class="card-body py-2">
+      <div class="d-flex flex-wrap gap-3">
+        <span><span class="badge" style="background-color: #FF69B4;">À venir</span></span>
+        <span><span class="badge bg-warning text-dark">En Salle d'attente</span></span>
+        <span><span class="badge bg-success">Vu</span></span>
+        <span><span class="badge bg-dark">Encaissé</span></span>
+        <span><span class="badge bg-info">Absent</span></span>
+        <span><span class="badge bg-secondary">Annulé</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendrier hebdomadaire -->
+  <div class="card">
+    <div class="card-header">
+      <strong>Disponibilités</strong>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-bordered mb-0" style="table-layout: fixed;">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 80px;">Heure</th>
+              <% (@start_date..@end_date).each do |date| %>
+                <th class="text-center <%= 'bg-primary text-white' if date == Date.today %>">
+                  <%= l(date, format: '%A %d %b') %>
+                </th>
+              <% end %>
+            </tr>
+          </thead>
+          <tbody>
+            <% @hours.each do |hour| %>
+              <% [0, 30].each do |minutes| %>
+                <tr>
+                  <td class="text-center text-muted small" style="vertical-align: middle;">
+                    <%= sprintf("%02d:%02d", hour, minutes) %>
+                  </td>
+                  
+                  <% (@start_date..@end_date).each do |date| %>
+                    <td class="p-1" style="height: 50px; position: relative;">
+                      <% time_slot = sprintf("%02d:%02d", hour, minutes) %>
+                      <% appointments_at_time = @appointments_by_day[date]&.select do |apt|
+                           apt.heure_debut.strftime("%H:%M") == time_slot
+                         end %>
+                      
+                      <% if appointments_at_time&.any? %>
+                        <% appointments_at_time.each do |apt| %>
+                          <%= link_to appointment_path(apt), 
+                                     class: "text-decoration-none d-block mb-1",
+                                     style: "cursor: pointer;" do %>
+                            <div class="badge w-100 text-start p-2 <%= "bg-#{Appointment::STATUT_COLORS[apt.statut]}" %>"
+                                 style="<%= 'background-color: #FF69B4 !important;' if apt.statut == 'a_venir' %>">
+                              <small>
+                                <strong><%= apt.patient.nom_complet %></strong><br>
+                                <span style="font-size: 0.8em;">
+                                  <%= apt.heure_debut.strftime("%H:%M") %> - <%= apt.heure_fin.strftime("%H:%M") %>
+                                  <% if apt.motif.present? %>
+                                    <br><%= truncate(apt.motif, length: 20) %>
+                                  <% end %>
+                                </span>
+                              </small>
+                            </div>
+                          <% end %>
+                        <% end %>
+                      <% else %>
+                        <%= link_to "+", 
+                                   new_appointment_path(
+                                     date: date, 
+                                     heure: time_slot,
+                                     medecin_id: @selected_medecin&.id
+                                   ),
+                                   class: "btn btn-sm btn-outline-secondary w-100 h-100 d-flex align-items-center justify-content-center",
+                                   style: "opacity: 0.3;",
+                                   title: "Créer un rendez-vous" %>
+                      <% end %>
+                    </td>
+                  <% end %>
+                </tr>
+              <% end %>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .table-responsive {
+    max-height: calc(100vh - 400px);
+    overflow-y: auto;
+  }
+  
+  .table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #f8f9fa;
+  }
+  
+  .badge {
+    font-weight: normal;
+    white-space: normal;
+    word-wrap: break-word;
+  }
+</style>

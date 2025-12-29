@@ -113,6 +113,26 @@ class Appointment < ApplicationRecord
     ((heure_fin_consultation - heure_debut_consultation) / 60).round # en minutes
   end
 
+  # Couleur selon le statut pour le calendrier
+  def statut_color
+    case statut.to_sym
+    when :a_venir
+      '#f8bbd0'  # Rose - À venir
+    when :en_salle_attente
+      '#fff59d'  # Jaune - En salle d'attente
+    when :vu
+      '#a5d6a7'  # Vert - Vu
+    when :encaisse
+      '#424242'  # Noir - Encaissé
+    when :absent
+      '#90caf9'  # Bleu - Absent
+    when :annule
+      '#b0bec5'  # Gris - Annulé
+    else
+      '#9e9e9e'  # Gris par défaut
+    end
+  end
+
   private
 
   def calculer_heure_fin
@@ -133,15 +153,17 @@ class Appointment < ApplicationRecord
   def pas_de_conflit_horaire
     return unless date_rdv && heure_debut && heure_fin && medecin_id
     
+    # Vérifier les chevauchements : deux RDV se chevauchent si
+    # le début de l'un est avant la fin de l'autre ET vice versa
     conflits = Appointment.unscoped
       .where(medecin_id: medecin_id, date_rdv: date_rdv)
       .where.not(id: id)
       .where.not(statut: [:annule, :absent])
-      .where("(heure_debut < ? AND heure_fin > ?) OR (heure_debut < ? AND heure_fin > ?)", 
-             heure_fin, heure_debut, heure_debut, heure_debut)
+      .where("heure_debut < ? AND heure_fin > ?", heure_fin, heure_debut)
     
     if conflits.exists?
-      errors.add(:heure_debut, "conflit avec un autre rendez-vous")
+      conflit = conflits.first
+      errors.add(:heure_debut, "conflit avec le RDV de #{conflit.patient.nom_complet} (#{conflit.heure_debut.strftime('%H:%M')} - #{conflit.heure_fin.strftime('%H:%M')})")
     end
   end
 end

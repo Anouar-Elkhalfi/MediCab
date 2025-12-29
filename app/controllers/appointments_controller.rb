@@ -1,7 +1,7 @@
 class AppointmentsController < ApplicationController
   before_action :authenticate_user!
   before_action :ensure_cabinet_exists
-  before_action :set_appointment, only: [:show, :edit, :update, :destroy]
+  before_action :set_appointment, only: [:show, :edit, :update, :destroy, :change_status, :update_date]
 
   def index
     @appointments = current_cabinet.appointments
@@ -22,10 +22,10 @@ class AppointmentsController < ApplicationController
     
     # Début de la semaine (lundi)
     @start_date = @date.beginning_of_week(:monday)
-    @end_date = params[:view] == '7j' ? @start_date + 6.days : @start_date + 5.days
+    @end_date = @start_date + 6.days # Toujours afficher 7 jours
     
     # Médecins du cabinet
-    @medecins = current_cabinet.users.where(role: [:medecin, :owner])
+    @medecins = current_cabinet.users.where(role: [:medecin, :owner]).order(:last_name)
     @selected_medecin = params[:medecin_id].present? ? @medecins.find(params[:medecin_id]) : @medecins.first
     
     # Récupérer tous les RDV de la semaine pour ce médecin
@@ -33,7 +33,7 @@ class AppointmentsController < ApplicationController
                                     .includes(:patient)
                                     .where(medecin_id: @selected_medecin&.id)
                                     .where(date_rdv: @start_date..@end_date)
-                                    .order_by_time
+                                    .order(:date_rdv, :heure_debut)
     
     # Recherche de patient
     if params[:search].present?
@@ -44,11 +44,23 @@ class AppointmentsController < ApplicationController
       )
     end
     
-    # Organiser les RDV par jour et par heure
+    # Organiser les RDV par jour
     @appointments_by_day = @appointments.group_by(&:date_rdv)
     
-    # Heures de travail (de 8h à 18h)
-    @hours = (8..18).to_a
+    # Heures de travail (de 8h à 20h par tranches de 30 min)
+    @time_slots = []
+    (8..19).each do |hour|
+      @time_slots << "#{hour.to_s.rjust(2, '0')}:00"
+      @time_slots << "#{hour.to_s.rjust(2, '0')}:30"
+    end
+    @time_slots << "20:00"
+    
+    # Patients en salle d'attente aujourd'hui
+    @waiting_patients = current_cabinet.appointments
+                                       .includes(:patient)
+                                       .where(date_rdv: Date.today)
+                                       .en_attente
+                                       .order(:heure_arrivee)
     
     authorize Appointment
   end
@@ -158,6 +170,69 @@ class AppointmentsController < ApplicationController
     respond_to do |format|
       format.html { redirect_back(fallback_location: waiting_list_appointments_path, notice: 'Statut mis à jour.') }
       format.turbo_stream
+    end
+  end
+
+  # Nouvelle vue avec FullCalendar
+  def calendar_view
+    @medecins = current_cabinet.users.where(role: [:medecin, :owner])
+    authorize Appointment
+  end
+
+  # API JSON pour FullCalendar
+  def events_json
+    start_date = params[:start] ? Date.parse(params[:start]) : Date.today.beginning_of_month
+    end_date = params[:end] ? Date.parse(params[:end]) : Date.today.end_of_month
+    
+    appointments = current_cabinet.appointments
+                                   .includes(:patient, :medecin)
+                                   .where(date_rdv: start_date..end_date)
+    
+    # Filtre par médecin
+    if params[:medecin_id].present? && params[:medecin_id] != 'all'
+      appointments = appointments.where(medecin_id: params[:medecin_id])
+    end
+    
+    events = appointments.map do |appointment|
+      {
+        id: appointment.id,
+        title: "#{appointment.patient.nom_complet} - #{appointment.motif || 'Consultation'}",
+        start: "#{appointment.date_rdv}T#{appointment.heure_debut.strftime('%H:%M')}",
+        end: "#{appointment.date_rdv}T#{appointment.heure_fin.strftime('%H:%M')}",
+        backgroundColor: appointment.statut_color,
+        borderColor: appointment.statut_color,
+        textColor: '#fff',
+        extendedProps: {
+          patient: appointment.patient.nom_complet,
+          medecin: appointment.medecin.full_name,
+          statut: appointment.statut,
+          statut_fr: I18n.t("activerecord.attributes.appointment.statuts.#{appointment.statut}"),
+          telephone: appointment.patient.telephone,
+          motif: appointment.motif
+        }
+      }
+    end
+    
+    render json: events
+  end
+
+  # Mettre à jour la date/heure d'un RDV (drag & drop)
+  def update_date
+    authorize @appointment
+    
+    new_start = DateTime.parse(params[:start])
+    new_date = new_start.to_date
+    new_time = new_start.strftime('%H:%M')
+    
+    @appointment.date_rdv = new_date
+    @appointment.heure_debut = new_time
+    # Force le recalcul de heure_fin
+    @appointment.heure_fin = nil
+    
+    if @appointment.save
+      render json: { success: true, message: 'Rendez-vous déplacé avec succès' }
+    else
+      render json: { success: false, errors: @appointment.errors.full_messages }, status: :unprocessable_entity
     end
   end
 

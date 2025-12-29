@@ -12,10 +12,13 @@ Rails.application.routes.draw do
   resources :appointments do
     collection do
       get :calendar
+      get :calendar_view  # Nouvelle vue avec FullCalendar
+      get :events_json    # API JSON pour FullCalendar
       get :waiting_list
     end
     member do
       patch :change_status
+      patch :update_date  # Pour le drag & drop
     end
     # Consultations (comptes rendus) - uniquement pour les médecins
     resources :consultations, only: [:show, :new, :create, :edit, :update, :destroy]

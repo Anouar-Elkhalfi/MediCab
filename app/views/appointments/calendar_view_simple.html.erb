@@ -1,0 +1,77 @@
+<div class="container-fluid mt-4">
+  <div class="row">
+    <div class="col-md-12">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-calendar-alt"></i> Calendrier des Rendez-vous</h2>
+        <div>
+          <%= link_to calendar_appointments_path, class: "btn btn-secondary me-2" do %>
+            <i class="fas fa-table"></i> Vue grille
+          <% end %>
+          <%= link_to new_appointment_path, class: "btn btn-primary" do %>
+            <i class="fas fa-plus"></i> Nouveau RDV
+          <% end %>
+        </div>
+      </div>
+
+      <div class="card shadow">
+        <div class="card-body">
+          <div id="calendar"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FullCalendar CSS -->
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css' rel='stylesheet' />
+
+<style>
+  #calendar {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+</style>
+
+<!-- FullCalendar JS -->
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.10/locales/fr.js'></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: 'timeGridWeek',
+      locale: 'fr',
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,timeGridDay'
+      },
+      slotMinTime: '08:00:00',
+      slotMaxTime: '20:00:00',
+      height: 'auto',
+      
+      events: function(info, successCallback, failureCallback) {
+        console.log('Fetching events...');
+        fetch('/appointments/events_json?start=' + info.startStr + '&end=' + info.endStr + '&medecin_id=all')
+          .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+          })
+          .then(data => {
+            console.log('Events loaded:', data);
+            successCallback(data);
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Erreur de chargement: ' + error);
+            failureCallback(error);
+          });
+      }
+    });
+
+    calendar.render();
+    console.log('Calendar rendered');
+  });
+</script>
