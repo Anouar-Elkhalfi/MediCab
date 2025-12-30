@@ -17,51 +17,8 @@ class AppointmentsController < ApplicationController
   end
 
   def calendar
-    # Date de référence (par défaut aujourd'hui)
-    @date = params[:date].present? ? Date.parse(params[:date]) : Date.today
-    
-    # Début de la semaine (lundi)
-    @start_date = @date.beginning_of_week(:monday)
-    @end_date = @start_date + 6.days # Toujours afficher 7 jours
-    
-    # Médecins du cabinet
-    @medecins = current_cabinet.users.where(role: [:medecin, :owner]).order(:last_name)
-    @selected_medecin = params[:medecin_id].present? ? @medecins.find(params[:medecin_id]) : @medecins.first
-    
-    # Récupérer tous les RDV de la semaine pour ce médecin
-    @appointments = current_cabinet.appointments
-                                    .includes(:patient)
-                                    .where(medecin_id: @selected_medecin&.id)
-                                    .where(date_rdv: @start_date..@end_date)
-                                    .order(:date_rdv, :heure_debut)
-    
-    # Recherche de patient
-    if params[:search].present?
-      search_term = "%#{params[:search]}%"
-      @appointments = @appointments.joins(:patient).where(
-        "patients.numero_dossier ILIKE ? OR patients.nom ILIKE ? OR patients.prenom ILIKE ? OR patients.telephone ILIKE ?",
-        search_term, search_term, search_term, search_term
-      )
-    end
-    
-    # Organiser les RDV par jour
-    @appointments_by_day = @appointments.group_by(&:date_rdv)
-    
-    # Heures de travail (de 8h à 20h par tranches de 30 min)
-    @time_slots = []
-    (8..19).each do |hour|
-      @time_slots << "#{hour.to_s.rjust(2, '0')}:00"
-      @time_slots << "#{hour.to_s.rjust(2, '0')}:30"
-    end
-    @time_slots << "20:00"
-    
-    # Patients en salle d'attente aujourd'hui
-    @waiting_patients = current_cabinet.appointments
-                                       .includes(:patient)
-                                       .where(date_rdv: Date.today)
-                                       .en_attente
-                                       .order(:heure_arrivee)
-    
+    # Vue FullCalendar avec drag & drop
+    @medecins = current_cabinet.users.where(role: [:medecin, :owner])
     authorize Appointment
   end
 
@@ -87,7 +44,7 @@ class AppointmentsController < ApplicationController
   def new
     @appointment = current_cabinet.appointments.build(
       date_rdv: params[:date] || Date.today,
-      heure_debut: params[:heure] || '09:00',
+      heure_debut: params[:heure] || params[:time] || '09:00',
       duree: 30
     )
     @appointment.medecin_id = params[:medecin_id] if params[:medecin_id].present?
@@ -175,12 +132,6 @@ class AppointmentsController < ApplicationController
       format.json { render json: { success: true, message: 'Statut mis à jour' } }
       format.turbo_stream
     end
-  end
-
-  # Nouvelle vue avec FullCalendar
-  def calendar_view
-    @medecins = current_cabinet.users.where(role: [:medecin, :owner])
-    authorize Appointment
   end
 
   # API JSON pour FullCalendar

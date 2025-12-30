@@ -11,8 +11,7 @@ Rails.application.routes.draw do
   # Rendez-vous
   resources :appointments do
     collection do
-      get :calendar
-      get :calendar_view  # Nouvelle vue avec FullCalendar
+      get :calendar       # Calendrier FullCalendar avec drag & drop
       get :events_json    # API JSON pour FullCalendar
       get :waiting_list
     end

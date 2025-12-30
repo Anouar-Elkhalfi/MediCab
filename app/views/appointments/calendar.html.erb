@@ -1,973 +1,461 @@
 <div class="calendar-pro-container">
   <!-- Sidebar gauche -->
   <div class="calendar-sidebar">
-    <!-- Mini calendrier -->
-    <div class="mini-calendar-widget card mb-3">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <%= link_to calendar_appointments_path(date: @date - 1.month, medecin_id: @selected_medecin&.id), class: "btn btn-sm btn-link", data: { turbo: false } do %>
-            <i class="fas fa-chevron-left"></i>
-          <% end %>
-          <strong><%= l(@date, format: '%B %Y') %></strong>
-          <%= link_to calendar_appointments_path(date: @date + 1.month, medecin_id: @selected_medecin&.id), class: "btn btn-sm btn-link", data: { turbo: false } do %>
-            <i class="fas fa-chevron-right"></i>
-          <% end %>
-        </div>
-        
-        <div class="mini-calendar">
-          <div class="weekdays">
-            <% %w[L M M J V S D].each do |day| %>
-              <div class="weekday"><%= day %></div>
-            <% end %>
-          </div>
-          <div class="days">
-            <% start_of_month = @date.beginning_of_month.beginning_of_week(:monday) %>
-            <% (0..41).each do |i| %>
-              <% day = start_of_month + i.days %>
-              <% is_current_month = day.month == @date.month %>
-              <% is_today = day == Date.today %>
-              <% is_selected = day >= @start_date && day <= @end_date %>
-              <%= link_to calendar_appointments_path(date: day, medecin_id: @selected_medecin&.id), 
-                  class: "day #{is_current_month ? 'current-month' : 'other-month'} #{is_today ? 'today' : ''} #{is_selected ? 'selected' : ''}",
-                  data: { turbo: false } do %>
-                <%= day.day %>
-              <% end %>
-            <% end %>
+    <!-- Salle d'attente -->
+    <div class="waiting-room-widget card mb-3">
+      <div class="card-header bg-warning text-dark">
+        <i class="fas fa-clock"></i> Salle d'attente
+        <span class="badge bg-dark float-end" id="waiting-count">0</span>
+      </div>
+      <div class="card-body p-0">
+        <div id="waiting-list">
+          <div class="text-center text-muted p-3">
+            <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+            <div>Chargement...</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Salle d'attente -->
-    <div class="waiting-room-widget card">
-      <div class="card-header bg-warning text-dark">
-        <i class="fas fa-clock"></i> Salle d'attente
-        <span class="badge bg-dark float-end"><%= @waiting_patients.count %></span>
+    <!-- Filtres et légende -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <i class="fas fa-filter"></i> Filtres
       </div>
-      <div class="card-body p-0">
-        <% if @waiting_patients.any? %>
-          <div class="waiting-list">
-            <% @waiting_patients.each do |appointment| %>
-              <div class="waiting-patient-item">
-                <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    <strong><%= appointment.patient.nom_complet %></strong>
-                    <div class="text-muted small">
-                      <%= appointment.heure_debut.strftime('%H:%M') %>
-                      <% if appointment.heure_arrivee %>
-                        <span class="badge bg-info">Arrivé <%= time_ago_in_words(appointment.heure_arrivee) %></span>
-                      <% end %>
-                    </div>
-                  </div>
-                  <%= link_to appointment_path(appointment), class: "btn btn-sm btn-outline-primary", data: { turbo: false } do %>
-                    <i class="fas fa-eye"></i>
-                  <% end %>
-                </div>
-              </div>
-            <% end %>
-          </div>
-        <% else %>
-          <div class="text-center text-muted p-3">
-            <i class="fas fa-check-circle fa-2x mb-2"></i>
-            <div>Aucun patient en attente</div>
-          </div>
-        <% end %>
+      <div class="card-body">
+        <label class="form-label"><strong><i class="fas fa-user-md"></i> Médecin :</strong></label>
+        <select id="medecin-filter" class="form-select mb-3">
+          <option value="all">Tous les médecins</option>
+          <% @medecins.each do |medecin| %>
+            <option value="<%= medecin.id %>">Dr <%= medecin.full_name %></option>
+          <% end %>
+        </select>
+        
+        <label class="form-label"><strong><i class="fas fa-palette"></i> Légende :</strong></label>
+        <div class="d-flex flex-column gap-2">
+          <span class="badge" style="background-color: #f8bbd0; color: #000;">À venir</span>
+          <span class="badge" style="background-color: #fff59d; color: #000;">En salle d'attente</span>
+          <span class="badge" style="background-color: #a5d6a7; color: #000;">Vu</span>
+          <span class="badge" style="background-color: #424242;">Encaissé</span>
+          <span class="badge" style="background-color: #90caf9; color: #000;">Absent</span>
+          <span class="badge" style="background-color: #b0bec5; color: #000;">Annulé</span>
+        </div>
       </div>
+    </div>
+
+    <!-- Info astuce -->
+    <div class="alert alert-info" role="alert" style="font-size: 0.85rem;">
+      <i class="fas fa-info-circle"></i> 
+      <strong>Astuce :</strong> Cliquez sur un créneau pour créer un RDV rapidement.
     </div>
   </div>
 
   <!-- Zone principale du calendrier -->
   <div class="calendar-main">
-    <!-- Header avec filtres -->
+    <!-- Header -->
     <div class="calendar-header card mb-3">
       <div class="card-body">
-        <div class="row align-items-center">
-          <div class="col-md-3">
-            <h5 class="mb-0">
-              <% if @selected_medecin %>
-                Dr <%= @selected_medecin.last_name %> <%= @selected_medecin.first_name %>
-              <% end %>
-            </h5>
-          </div>
-          <div class="col-md-4">
-            <%= form_with url: calendar_appointments_path, method: :get, local: true, class: "d-flex gap-2" do |f| %>
-              <%= f.hidden_field :date, value: @date %>
-              <%= f.select :medecin_id, 
-                  options_from_collection_for_select(@medecins, :id, 
-                    ->(m) { "Dr #{m.last_name} #{m.first_name}" }, 
-                    @selected_medecin&.id),
-                  {}, 
-                  class: "form-select", 
-                  onchange: "this.form.submit()" %>
-            <% end %>
-          </div>
-          <div class="col-md-5 text-end">
-            <div class="btn-group" role="group">
-              <%= link_to calendar_appointments_path(date: @date - 7.days, medecin_id: @selected_medecin&.id), 
-                  class: "btn btn-outline-secondary", data: { turbo: false } do %>
-                <i class="fas fa-chevron-left"></i>
-              <% end %>
-              <%= link_to calendar_appointments_path(date: Date.today, medecin_id: @selected_medecin&.id), 
-                  class: "btn btn-outline-secondary", data: { turbo: false } do %>
-                Aujourd'hui
-              <% end %>
-              <%= link_to calendar_appointments_path(date: @date + 7.days, medecin_id: @selected_medecin&.id), 
-                  class: "btn btn-outline-secondary", data: { turbo: false } do %>
-                <i class="fas fa-chevron-right"></i>
-              <% end %>
-            </div>
-            <%= link_to new_appointment_path(date: @date, medecin_id: @selected_medecin&.id), 
-                class: "btn btn-primary ms-2" do %>
-              <i class="fas fa-plus"></i> Nouveau RDV
-            <% end %>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Légende des couleurs -->
-    <div class="card mb-3">
-      <div class="card-body py-2">
-        <div class="d-flex justify-content-center gap-3 flex-wrap">
-          <span class="status-legend">
-            <span class="status-badge a_venir"></span> À venir
-          </span>
-          <span class="status-legend">
-            <span class="status-badge en_salle_attente"></span> En Salle d'attente
-          </span>
-          <span class="status-legend">
-            <span class="status-badge vu"></span> Vu
-          </span>
-          <span class="status-legend">
-            <span class="status-badge encaisse"></span> Encaissé
-          </span>
-          <span class="status-legend">
-            <span class="status-badge absent"></span> Absent
-          </span>
-          <span class="status-legend">
-            <span class="status-badge annule"></span> Annulé
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Grille du calendrier hebdomadaire -->
-    <div class="calendar-grid-container">
-      <div class="calendar-week-header">
-        <div class="time-column-header"></div>
-        <% (@start_date..@end_date).each do |day| %>
-          <div class="day-column-header <%= 'today' if day == Date.today %>">
-            <div class="day-name"><%= l(day, format: '%a') %></div>
-            <div class="day-number"><%= day.day %></div>
-          </div>
-        <% end %>
-      </div>
-
-      <div class="calendar-grid">
-        <div class="time-column">
-          <% @time_slots.each do |time_slot| %>
-            <div class="time-slot-label"><%= time_slot %></div>
+        <div class="d-flex justify-content-between align-items-center">
+          <h4 class="mb-0"><i class="fas fa-calendar-alt"></i> Calendrier des Rendez-vous</h4>
+          <%= link_to new_appointment_path, class: "btn btn-primary" do %>
+            <i class="fas fa-plus"></i> Nouveau RDV
           <% end %>
         </div>
+      </div>
+    </div>
 
-        <% (@start_date..@end_date).each do |day| %>
-          <div class="day-column <%= 'today' if day == Date.today %>">
-            <!-- Indicateur d'heure actuelle -->
-            <% if day == Date.today %>
-              <div class="now-indicator" id="now-indicator-<%= day %>"></div>
-            <% end %>
-            
-            <% @time_slots.each do |time_slot| %>
-              <div class="time-slot" data-day="<%= day %>" data-time="<%= time_slot %>">
-                <% appointments_at_time = (@appointments_by_day[day] || []).select { |apt| apt.heure_debut.strftime('%H:%M') == time_slot } %>
-                
-                <% appointments_at_time.each do |appointment| %>
-                  <% duration_slots = (appointment.duree / 30.0).ceil %>
-                  <a href="#" 
-                      class="appointment-card status-#{appointment.statut}" 
-                      style="height: #{duration_slots * 100}%;"
-                      title="<%= appointment.patient.nom_complet %>"
-                      draggable="true"
-                      data-appointment-id="<%= appointment.id %>"
-                      data-current-date="<%= appointment.date_rdv %>"
-                      data-current-time="<%= appointment.heure_debut.strftime('%H:%M') %>"
-                      data-patient-name="<%= appointment.patient.nom_complet %>"
-                      data-patient-phone="<%= appointment.patient.telephone %>"
-                      data-medecin-name="Dr <%= appointment.medecin.last_name %>"
-                      data-time-start="<%= appointment.heure_debut.strftime('%H:%M') %>"
-                      data-time-end="<%= appointment.heure_fin.strftime('%H:%M') %>"
-                      data-motif="<%= appointment.motif %>"
-                      data-statut="<%= appointment.statut %>"
-                      data-statut-label="<%= Appointment::STATUT_LABELS[appointment.statut] %>"
-                      onclick="openAppointmentModal(event, this); return false;">
-                    <div class="appointment-time"><%= appointment.heure_debut.strftime('%H:%M') %></div>
-                    <div class="appointment-patient"><%= appointment.patient.nom.upcase %> <%= appointment.patient.prenom %></div>
-                    <% if appointment.motif.present? %>
-                      <div class="appointment-motif"><%= truncate(appointment.motif, length: 30) %></div>
-                    <% end %>
-                  </a>
-                <% end %>
-              </div>
-            <% end %>
-          </div>
-        <% end %>
+    <!-- Calendrier FullCalendar -->
+    <div class="card shadow">
+      <div class="card-body">
+        <div id="calendar"></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Modal pour actions rapides sur RDV -->
-<div class="modal fade" id="appointmentQuickModal" tabindex="-1" aria-hidden="true">
+<!-- Modal pour les détails du RDV -->
+<div class="modal fade" id="eventModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">
-          <i class="fas fa-calendar-check"></i> 
-          <span id="modal-patient-name"></span>
-        </h5>
+        <h5 class="modal-title">Détails du rendez-vous</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body">
-        <div class="mb-3">
-          <div class="row">
-            <div class="col-6">
-              <small class="text-muted">Patient</small>
-              <div class="fw-bold" id="modal-patient-full"></div>
-            </div>
-            <div class="col-6">
-              <small class="text-muted">Téléphone</small>
-              <div id="modal-patient-phone"></div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="mb-3">
-          <div class="row">
-            <div class="col-6">
-              <small class="text-muted">Horaire</small>
-              <div class="fw-bold" id="modal-time"></div>
-            </div>
-            <div class="col-6">
-              <small class="text-muted">Médecin</small>
-              <div id="modal-medecin"></div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="mb-3" id="modal-motif-container">
-          <small class="text-muted">Motif</small>
-          <div id="modal-motif"></div>
-        </div>
-        
-        <div class="mb-3">
-          <small class="text-muted">Statut actuel</small>
-          <div>
-            <span class="badge" id="modal-current-status"></span>
-          </div>
-        </div>
-        
-        <hr>
-        
-        <div class="mb-2">
-          <strong><i class="fas fa-exchange-alt"></i> Changer le statut :</strong>
-        </div>
-        
-        <div class="d-grid gap-2">
-          <button type="button" class="btn btn-outline-warning" onclick="changeAppointmentStatus('en_salle_attente')">
-            <i class="fas fa-clock"></i> En salle d'attente
-          </button>
-          <button type="button" class="btn btn-outline-success" onclick="changeAppointmentStatus('vu')">
-            <i class="fas fa-check-circle"></i> Consultation terminée
-          </button>
-          <button type="button" class="btn btn-outline-dark" onclick="changeAppointmentStatus('encaisse')">
-            <i class="fas fa-euro-sign"></i> Encaissé
-          </button>
-          <button type="button" class="btn btn-outline-info" onclick="changeAppointmentStatus('absent')">
-            <i class="fas fa-user-times"></i> Absent
-          </button>
-          <button type="button" class="btn btn-outline-secondary" onclick="changeAppointmentStatus('annule')">
-            <i class="fas fa-ban"></i> Annuler
-          </button>
-        </div>
+      <div class="modal-body" id="eventDetails">
+        <!-- Contenu dynamique -->
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-        <a href="#" id="modal-view-link" class="btn btn-primary" target="_blank">
-          <i class="fas fa-eye"></i> Voir détails
-        </a>
+        <a href="#" id="eventEditLink" class="btn btn-primary">Voir/Modifier</a>
       </div>
     </div>
   </div>
 </div>
 
+<!-- FullCalendar CSS & Scripts -->
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css' rel='stylesheet' />
+
 <style>
-.calendar-pro-container {
-  display: flex;
-  gap: 20px;
-  padding: 20px;
-  background: #f5f6fa;
-  min-height: calc(100vh - 100px);
-}
-
-.calendar-sidebar {
-  width: 280px;
-  flex-shrink: 0;
-}
-
-.calendar-main {
-  flex: 1;
-  min-width: 0;
-}
-
-/* Mini calendrier */
-.mini-calendar {
-  font-size: 0.85rem;
-}
-
-.mini-calendar .weekdays {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-  margin-bottom: 5px;
-}
-
-.mini-calendar .weekday {
-  text-align: center;
-  font-weight: 600;
-  color: #666;
-  padding: 5px 0;
-}
-
-.mini-calendar .days {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-}
-
-.mini-calendar .day {
-  aspect-ratio: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  color: #333;
-  border-radius: 4px;
-  transition: all 0.2s;
-}
-
-.mini-calendar .day:hover {
-  background: #e3f2fd;
-}
-
-.mini-calendar .day.other-month {
-  color: #ccc;
-}
-
-.mini-calendar .day.today {
-  background: #2196F3;
-  color: white;
-  font-weight: bold;
-}
-
-.mini-calendar .day.selected {
-  background: #bbdefb;
-  font-weight: bold;
-}
-
-/* Salle d'attente */
-.waiting-room-widget {
-  max-height: 400px;
-  overflow: hidden;
-}
-
-.waiting-list {
-  max-height: 320px;
-  overflow-y: auto;
-}
-
-.waiting-patient-item {
-  padding: 12px;
-  border-bottom: 1px solid #eee;
-  transition: background 0.2s;
-}
-
-.waiting-patient-item:hover {
-  background: #f8f9fa;
-}
-
-.waiting-patient-item:last-child {
-  border-bottom: none;
-}
-
-/* Grille calendrier */
-.calendar-grid-container {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  overflow: hidden;
-}
-
-.calendar-week-header {
-  display: grid;
-  grid-template-columns: 80px repeat(7, 1fr);
-  border-bottom: 2px solid #e0e0e0;
-  background: #fafafa;
-}
-
-.time-column-header {
-  border-right: 1px solid #e0e0e0;
-}
-
-.day-column-header {
-  text-align: center;
-  padding: 15px 5px;
-  border-right: 1px solid #e0e0e0;
-}
-
-.day-column-header.today {
-  background: #e3f2fd;
-  font-weight: bold;
-}
-
-.day-column-header:last-child {
-  border-right: none;
-}
-
-.day-name {
-  font-size: 0.85rem;
-  color: #666;
-  text-transform: uppercase;
-}
-
-.day-number {
-  font-size: 1.2rem;
-  font-weight: 600;
-  margin-top: 5px;
-}
-
-.calendar-grid {
-  display: grid;
-  grid-template-columns: 80px repeat(7, 1fr);
-  max-height: calc(100vh - 400px);
-  overflow-y: auto;
-}
-
-.time-column {
-  border-right: 1px solid #e0e0e0;
-  background: #fafafa;
-}
-
-.time-slot-label {
-  height: 60px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 5px;
-  font-size: 0.8rem;
-  color: #666;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.day-column {
-  border-right: 1px solid #e0e0e0;
-  position: relative;
-}
-
-.day-column.today {
-  background: #fafeff;
-}
-
-.day-column:last-child {
-  border-right: none;
-}
-
-.time-slot {
-  height: 60px;
-  border-bottom: 1px solid #f0f0f0;
-  position: relative;
-  transition: background 0.2s;
-  cursor: pointer;
-}
-
-.time-slot:hover:not(:has(.appointment-card)) {
-  background: #f8f9fa;
-}
-
-.time-slot:has(.appointment-card) {
-  cursor: not-allowed;
-  background: #fafafa;
-}
-
-.time-slot.drag-over:not(:has(.appointment-card)) {
-  background: #e3f2fd;
-  border: 2px dashed #2196F3;
-}
-
-.time-slot.drag-over:has(.appointment-card) {
-  background: #ffebee;
-  border: 2px dashed #f44336;
-}
-
-/* Carte rendez-vous */
-.appointment-card {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  right: 2px;
-  padding: 8px;
-  border-radius: 6px;
-  border-left: 4px solid;
-  color: #333;
-  text-decoration: none;
-  font-size: 0.85rem;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  transition: all 0.2s;
-  z-index: 1;
-  cursor: move;
-}
-
-.appointment-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-  z-index: 2;
-}
-
-.appointment-card:active {
-  cursor: grabbing;
-}
-
-.appointment-time {
-  font-weight: 600;
-  font-size: 0.75rem;
-  margin-bottom: 2px;
-}
-
-.appointment-patient {
-  font-weight: 600;
-  margin-bottom: 2px;
-  line-height: 1.2;
-}
-
-.appointment-motif {
-  font-size: 0.75rem;
-  opacity: 0.8;
-  line-height: 1.2;
-}
-
-.appointment-actions {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.appointment-card:hover .appointment-actions {
-  opacity: 1;
-}
-
-.btn-action {
-  padding: 2px 6px;
-  font-size: 0.7rem;
-}
-
-/* Statuts couleurs (comme DoctoPRO) */
-.appointment-card.status-a_venir {
-  background: #f8bbd0;
-  border-left-color: #e91e63;
-}
-
-.appointment-card.status-en_salle_attente {
-  background: #fff59d;
-  border-left-color: #fbc02d;
-}
-
-.appointment-card.status-vu {
-  background: #a5d6a7;
-  border-left-color: #4caf50;
-}
-
-.appointment-card.status-encaisse {
-  background: #90a4ae;
-  border-left-color: #455a64;
-  color: white;
-}
-
-.appointment-card.status-absent {
-  background: #90caf9;
-  border-left-color: #1976d2;
-}
-
-.appointment-card.status-annule {
-  background: #e0e0e0;
-  border-left-color: #757575;
-  text-decoration: line-through;
-  opacity: 0.7;
-}
-
-/* Légende statuts */
-.status-legend {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.85rem;
-}
-
-.status-badge {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
-  border: 2px solid;
-}
-
-.status-badge.a_venir {
-  background: #f8bbd0;
-  border-color: #e91e63;
-}
-
-.status-badge.en_salle_attente {
-  background: #fff59d;
-  border-color: #fbc02d;
-}
-
-.status-badge.vu {
-  background: #a5d6a7;
-  border-color: #4caf50;
-}
-
-.status-badge.encaisse {
-  background: #90a4ae;
-  border-color: #455a64;
-}
-
-.status-badge.absent {
-  background: #90caf9;
-  border-color: #1976d2;
-}
-
-.status-badge.annule {
-  background: #e0e0e0;
-  border-color: #757575;
-}
-
-/* Indicateur d'heure actuelle */
-.now-indicator {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: #ff0000;
-  z-index: 100;
-  pointer-events: none;
-}
-
-.now-indicator::before {
-  content: '';
-  position: absolute;
-  left: -6px;
-  top: -5px;
-  width: 12px;
-  height: 12px;
-  background: #ff0000;
-  border-radius: 50%;
-  border: 2px solid white;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-.now-indicator::after {
-  content: attr(data-time);
-  position: absolute;
-  left: 15px;
-  top: -8px;
-  background: #ff0000;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 3px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  white-space: nowrap;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-/* Responsive */
-@media (max-width: 1200px) {
-  .calendar-sidebar {
-    width: 250px;
-  }
-}
-
-@media (max-width: 992px) {
+  /* Layout Sidebar + Calendrier */
   .calendar-pro-container {
-    flex-direction: column;
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    background: #f5f6fa;
+    min-height: calc(100vh - 100px);
+  }
+
+  .calendar-sidebar {
+    width: 300px;
+    flex-shrink: 0;
+  }
+
+  .calendar-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Salle d'attente */
+  .waiting-room-widget {
+    max-height: 450px;
+    overflow: hidden;
+  }
+
+  #waiting-list {
+    max-height: 350px;
+    overflow-y: auto;
+  }
+
+  .waiting-patient-item {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    transition: background 0.2s;
+  }
+
+  .waiting-patient-item:hover {
+    background: #f8f9fa;
+  }
+
+  .waiting-patient-item:last-child {
+    border-bottom: none;
+  }
+
+  /* Styles FullCalendar */
+  #calendar {
+    min-height: 700px;
+    background: white;
   }
   
-  .calendar-sidebar {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
+  .fc-event {
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 0.85rem;
   }
-}
+  
+  .fc-event:hover {
+    opacity: 0.85;
+  }
+  
+  .fc-daygrid-event {
+    white-space: normal !important;
+  }
+  
+  .fc-toolbar-title {
+    font-size: 1.5rem !important;
+    font-weight: 600 !important;
+  }
+  
+  .fc-button {
+    padding: 0.4rem 0.8rem !important;
+    font-size: 0.9rem !important;
+  }
+  
+  .fc-col-header-cell {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    padding: 10px 0;
+  }
+  
+  .fc-day-today {
+    background-color: #fff3cd !important;
+  }
+  
+  /* Curseur pointer pour indiquer que les créneaux sont cliquables */
+  .fc-timegrid-slot,
+  .fc-daygrid-day {
+    cursor: pointer;
+  }
+  
+  .fc-timegrid-slot:hover,
+  .fc-daygrid-day:hover {
+    background-color: rgba(13, 110, 253, 0.05) !important;
+  }
 </style>
 
+<!-- FullCalendar Scripts -->
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.10/locales/fr.global.min.js'></script>
+
 <script>
-  // Fonction pour positionner l'indicateur d'heure actuelle
-  function updateNowIndicator() {
-    const indicators = document.querySelectorAll('.now-indicator');
-    
-    indicators.forEach(indicator => {
-      const now = new Date();
-      const hours = now.getHours();
-      const minutes = now.getMinutes();
-      
-      // Calculer la position en pixels depuis 8h00 (début de la journée)
-      const startHour = 8;
-      const slotHeight = 60; // Hauteur d'un slot de 30 minutes
-      
-      // Si l'heure actuelle est en dehors des heures de travail (8h-20h)
-      if (hours < startHour || hours >= 20) {
-        indicator.style.display = 'none';
-        return;
-      }
-      
-      // Calculer la position
-      const totalMinutesSinceStart = (hours - startHour) * 60 + minutes;
-      const position = (totalMinutesSinceStart / 30) * slotHeight;
-      
-      indicator.style.top = `${position}px`;
-      indicator.style.display = 'block';
-      
-      // Ajouter l'heure actuelle comme data-time
-      const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-      indicator.setAttribute('data-time', timeString);
-    });
-  }
+  let calendarInstance = null;
   
-  // Initialiser au chargement
-  document.addEventListener('DOMContentLoaded', function() {
-    updateNowIndicator();
+  function initializeCalendar() {
+    console.log('=== DÉBUT INITIALISATION CALENDRIER ===');
     
-    // Mettre à jour toutes les minutes
-    setInterval(updateNowIndicator, 60000);
-  });
-  
-  // Mettre à jour après navigation Turbo
-  document.addEventListener('turbo:load', function() {
-    updateNowIndicator();
-    
-    // Nettoyer les anciens intervalles et en créer un nouveau
-    if (window.nowIndicatorInterval) {
-      clearInterval(window.nowIndicatorInterval);
+    // Éviter les doubles initialisations
+    if (calendarInstance) {
+      console.log('Calendrier déjà initialisé, destruction de l\'instance précédente');
+      calendarInstance.destroy();
+      calendarInstance = null;
     }
-    window.nowIndicatorInterval = setInterval(updateNowIndicator, 60000);
-  });
-  
-  // ========== DRAG AND DROP ==========
-  let draggedAppointment = null;
-  
-  function initDragAndDrop() {
-    // Gestion du début du drag
-    document.querySelectorAll('.appointment-card').forEach(card => {
-      card.addEventListener('dragstart', function(e) {
-        draggedAppointment = {
-          id: this.dataset.appointmentId,
-          element: this
-        };
-        this.style.opacity = '0.4';
-        e.dataTransfer.effectAllowed = 'move';
-      });
-      
-      card.addEventListener('dragend', function(e) {
-        this.style.opacity = '1';
-        document.querySelectorAll('.time-slot').forEach(slot => {
-          slot.classList.remove('drag-over');
-        });
-      });
-    });
     
-    // Gestion du drop sur les créneaux
-    document.querySelectorAll('.time-slot').forEach(slot => {
-      slot.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        this.classList.add('drag-over');
-      });
+    const calendarEl = document.getElementById('calendar');
+    const medecinFilter = document.getElementById('medecin-filter');
+    
+    if (!calendarEl) {
+      console.error('❌ Élément #calendar non trouvé !');
+      return;
+    }
+    
+    if (typeof FullCalendar === 'undefined') {
+      console.error('❌ FullCalendar non chargé !');
+      setTimeout(initializeCalendar, 100); // Réessayer après 100ms
+      return;
+    }
+    
+    console.log('Création de l\'instance FullCalendar...');
+    
+    calendarInstance = new FullCalendar.Calendar(calendarEl, {
+      initialView: 'timeGridWeek',
+      locale: 'fr',
+      firstDay: 1, // Semaine commence le lundi
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+      },
+      buttonText: {
+        today: "Aujourd'hui",
+        month: 'Mois',
+        week: 'Semaine',
+        day: 'Jour',
+        list: 'Liste'
+      },
+      slotMinTime: '08:00:00',
+      slotMaxTime: '20:00:00',
+      slotDuration: '00:15:00',
+      allDaySlot: false,
+      height: 'auto',
+      nowIndicator: true,
+      editable: true, // Permet le drag & drop
+      droppable: true,
+      eventResizableFromStart: true,
       
-      slot.addEventListener('dragleave', function(e) {
-        this.classList.remove('drag-over');
-      });
+      // Charger les événements
+      events: function(info, successCallback, failureCallback) {
+        const medecinId = medecinFilter.value;
+        const url = `/appointments/events_json?start=${info.startStr}&end=${info.endStr}&medecin_id=${medecinId}`;
+        
+        console.log('Chargement des événements depuis:', url);
+        
+        fetch(url)
+          .then(response => {
+            console.log('Réponse reçue:', response.status);
+            return response.json();
+          })
+          .then(data => {
+            console.log('Événements chargés:', data.length);
+            successCallback(data);
+          })
+          .catch(error => {
+            console.error('Erreur chargement événements:', error);
+            failureCallback(error);
+          });
+      },
       
-      slot.addEventListener('drop', function(e) {
-        e.preventDefault();
-        this.classList.remove('drag-over');
+      // Clic sur un créneau vide pour créer un nouveau RDV
+      dateClick: function(info) {
+        // Formater la date et l'heure pour l'URL
+        const dateTime = info.date.toISOString();
+        const date = info.dateStr.split('T')[0]; // YYYY-MM-DD
+        const time = info.date.toTimeString().slice(0, 5); // HH:MM
         
-        if (!draggedAppointment) return;
+        // Vérifier si un médecin est sélectionné dans le filtre
+        const medecinId = medecinFilter.value !== 'all' ? medecinFilter.value : '';
         
-        const newDate = this.dataset.day;
-        const newTime = this.dataset.time;
-        const appointmentId = draggedAppointment.id;
+        // Construire l'URL avec les paramètres
+        let url = `/appointments/new?date=${date}&time=${time}`;
+        if (medecinId) {
+          url += `&medecin_id=${medecinId}`;
+        }
         
-        // Vérifier si le créneau est libre (pas d'autre RDV visible)
-        const existingAppointments = this.querySelectorAll('.appointment-card');
-        if (existingAppointments.length > 0) {
-          alert('⚠️ Ce créneau est déjà occupé. Veuillez choisir un autre créneau.');
+        // Rediriger vers le formulaire de création
+        window.location.href = url;
+      },
+      
+      // Clic sur un événement existant
+      eventClick: function(info) {
+        const event = info.event;
+        const props = event.extendedProps;
+        
+        const modalBody = document.getElementById('eventDetails');
+        modalBody.innerHTML = `
+          <div class="mb-3">
+            <strong><i class="fas fa-user"></i> Patient :</strong> ${props.patient}<br>
+            <strong><i class="fas fa-phone"></i> Téléphone :</strong> ${props.telephone}<br>
+            <strong><i class="fas fa-user-md"></i> Médecin :</strong> Dr ${props.medecin}<br>
+            <strong><i class="fas fa-clock"></i> Horaire :</strong> ${event.start.toLocaleString('fr-FR', { 
+              day: '2-digit', 
+              month: 'long', 
+              year: 'numeric',
+              hour: '2-digit', 
+              minute: '2-digit' 
+            })}<br>
+            <strong><i class="fas fa-info-circle"></i> Statut :</strong> 
+            <span class="badge" style="background-color: ${event.backgroundColor}">${props.statut_fr}</span><br>
+            ${props.motif ? `<strong><i class="fas fa-stethoscope"></i> Motif :</strong> ${props.motif}` : ''}
+          </div>
+        `;
+        
+        document.getElementById('eventEditLink').href = `/appointments/${event.id}`;
+        
+        const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+        modal.show();
+      },
+      
+      // Drag & drop d'un événement
+      eventDrop: function(info) {
+        const event = info.event;
+        
+        if (!confirm(`Déplacer le rendez-vous de ${event.extendedProps.patient} au ${event.start.toLocaleString('fr-FR')} ?`)) {
+          info.revert();
           return;
         }
         
-        // Demander confirmation
-        const formattedDate = new Date(newDate).toLocaleDateString('fr-FR', { 
-          weekday: 'long', 
-          day: 'numeric', 
-          month: 'long', 
-          year: 'numeric' 
-        });
-        if (!confirm(`Déplacer le rendez-vous au ${formattedDate} à ${newTime} ?`)) {
-          return;
-        }
-        
-        // Créer la nouvelle date/heure
-        const newDateTime = `${newDate}T${newTime}:00`;
-        
-        // Appeler l'API pour mettre à jour
-        fetch(`/appointments/${appointmentId}/update_date`, {
+        fetch(`/appointments/${event.id}/update_date`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
             'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
           },
           body: JSON.stringify({
-            start: newDateTime
+            start: event.start.toISOString()
           })
         })
-        .then(response => {
-          if (!response.ok) {
-            return response.json().then(data => {
-              throw new Error(data.errors ? data.errors.join(', ') : 'Erreur lors du déplacement');
-            });
-          }
-          return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
           if (data.success) {
-            // Recharger la page pour afficher les changements
-            window.location.reload();
+            alert('✅ ' + data.message);
           } else {
-            alert('❌ ' + (data.errors ? data.errors.join('\n') : 'Impossible de déplacer le rendez-vous'));
+            alert('❌ Erreur : ' + data.errors.join(', '));
+            info.revert();
           }
         })
         .catch(error => {
           console.error('Erreur:', error);
-          alert('❌ ' + error.message);
+          alert('❌ Erreur lors du déplacement');
+          info.revert();
+        });
+      },
+      
+      // Redimensionnement d'un événement
+      eventResize: function(info) {
+        alert('Fonctionnalité de redimensionnement à venir');
+        info.revert();
+      }
+    });
+    
+    console.log('Instance créée, appel de render()...');
+    calendarInstance.render();
+    console.log('✅ Calendrier rendu !');
+    
+    // Filtre par médecin
+    medecinFilter.addEventListener('change', function() {
+      console.log('Changement de filtre médecin:', medecinFilter.value);
+      calendarInstance.refetchEvents();
+      loadWaitingList(); // Recharger la liste d'attente
+    });
+    
+    // Charger la liste d'attente
+    loadWaitingList();
+    
+    console.log('=== FIN INITIALISATION ===');
+  }
+  
+  // Fonction pour charger la liste d'attente
+  function loadWaitingList() {
+    fetch('/appointments/events_json?start=' + new Date().toISOString().split('T')[0] + 
+          '&end=' + new Date().toISOString().split('T')[0])
+      .then(response => response.json())
+      .then(events => {
+        // Filtrer les RDV en salle d'attente d'aujourd'hui
+        const waitingAppointments = events.filter(event => {
+          const eventDate = new Date(event.start).toDateString();
+          const today = new Date().toDateString();
+          return eventDate === today && event.extendedProps.statut === 'en_salle_attente';
         });
         
-        draggedAppointment = null;
-      });
-    });
-  }
-  
-  // Initialiser au chargement
-  document.addEventListener('DOMContentLoaded', initDragAndDrop);
-  document.addEventListener('turbo:load', initDragAndDrop);
-  
-  // ========== MODAL ACTIONS RAPIDES ==========
-  let currentAppointmentId = null;
-  
-  function openAppointmentModal(event, element) {
-    event.preventDefault();
-    event.stopPropagation();
-    
-    // Récupérer les données du RDV
-    currentAppointmentId = element.dataset.appointmentId;
-    const patientName = element.dataset.patientName;
-    const patientPhone = element.dataset.patientPhone;
-    const medecinName = element.dataset.medecinName;
-    const timeStart = element.dataset.timeStart;
-    const timeEnd = element.dataset.timeEnd;
-    const motif = element.dataset.motif;
-    const statut = element.dataset.statut;
-    const statutLabel = element.dataset.statutLabel;
-    
-    // Remplir la modal
-    document.getElementById('modal-patient-name').textContent = patientName;
-    document.getElementById('modal-patient-full').textContent = patientName;
-    document.getElementById('modal-patient-phone').textContent = patientPhone;
-    document.getElementById('modal-medecin').textContent = medecinName;
-    document.getElementById('modal-time').textContent = `${timeStart} - ${timeEnd}`;
-    
-    // Motif
-    if (motif && motif !== '') {
-      document.getElementById('modal-motif').textContent = motif;
-      document.getElementById('modal-motif-container').style.display = 'block';
-    } else {
-      document.getElementById('modal-motif-container').style.display = 'none';
-    }
-    
-    // Statut actuel avec couleur
-    const statusBadge = document.getElementById('modal-current-status');
-    statusBadge.textContent = statutLabel;
-    statusBadge.className = 'badge bg-' + getStatusColor(statut);
-    
-    // Lien vers détails
-    document.getElementById('modal-view-link').href = `/appointments/${currentAppointmentId}`;
-    
-    // Ouvrir la modal
-    const modal = new bootstrap.Modal(document.getElementById('appointmentQuickModal'));
-    modal.show();
-  }
-  
-  function getStatusColor(statut) {
-    const colors = {
-      'a_venir': 'pink',
-      'en_salle_attente': 'warning',
-      'vu': 'success',
-      'encaisse': 'dark',
-      'absent': 'info',
-      'annule': 'secondary'
-    };
-    return colors[statut] || 'secondary';
-  }
-  
-  function changeAppointmentStatus(newStatus) {
-    if (!currentAppointmentId) return;
-    
-    // Confirmation
-    const statusLabels = {
-      'en_salle_attente': 'En salle d\'attente',
-      'vu': 'Consultation terminée',
-      'encaisse': 'Encaissé',
-      'absent': 'Absent',
-      'annule': 'Annulé'
-    };
-    
-    if (!confirm(`Changer le statut en "${statusLabels[newStatus]}" ?`)) {
-      return;
-    }
-    
-    // Envoyer la requête
-    fetch(`/appointments/${currentAppointmentId}/change_status`, {
-      method: 'PATCH',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
-      },
-      body: JSON.stringify({
-        appointment: { statut: newStatus }
+        const waitingList = document.getElementById('waiting-list');
+        const waitingCount = document.getElementById('waiting-count');
+        
+        waitingCount.textContent = waitingAppointments.length;
+        
+        if (waitingAppointments.length === 0) {
+          waitingList.innerHTML = `
+            <div class="text-center text-muted p-3">
+              <i class="fas fa-check-circle fa-2x mb-2"></i>
+              <div>Aucun patient en attente</div>
+            </div>
+          `;
+        } else {
+          waitingList.innerHTML = waitingAppointments.map(apt => {
+            const startTime = new Date(apt.start);
+            return `
+              <div class="waiting-patient-item">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong>${apt.extendedProps.patient}</strong>
+                    <div class="text-muted small">
+                      ${startTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                  <a href="/appointments/${apt.id}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
       })
-    })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Erreur lors du changement de statut');
-      }
-      // Fermer la modal et forcer un vrai rechargement (bypass Turbo cache)
-      bootstrap.Modal.getInstance(document.getElementById('appointmentQuickModal')).hide();
-      window.location.href = window.location.href;
-    })
-    .catch(error => {
-      console.error('Erreur:', error);
-      alert('❌ Erreur lors du changement de statut');
-    });
+      .catch(error => {
+        console.error('Erreur chargement liste d\'attente:', error);
+        document.getElementById('waiting-list').innerHTML = `
+          <div class="text-center text-danger p-3">
+            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+            <div>Erreur de chargement</div>
+          </div>
+        `;
+      });
   }
+  
+  // Écouter les événements Turbo ET le chargement initial
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeCalendar);
+  } else {
+    // DOM déjà chargé (cas de Turbo)
+    initializeCalendar();
+  }
+  document.addEventListener('turbo:load', initializeCalendar);
+  document.addEventListener('turbo:render', initializeCalendar);
+  
+  // Nettoyer lors de la navigation Turbo
+  document.addEventListener('turbo:before-render', function() {
+    if (calendarInstance) {
+      console.log('Navigation Turbo détectée, destruction du calendrier');
+      calendarInstance.destroy();
+      calendarInstance = null;
+    }
+  });
 </script>
