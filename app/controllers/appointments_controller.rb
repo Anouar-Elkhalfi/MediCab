@@ -175,7 +175,8 @@ class AppointmentsController < ApplicationController
   def update_date
     authorize @appointment
     
-    new_start = DateTime.parse(params[:start])
+    # Parser la date ISO en forçant le timezone local
+    new_start = Time.zone.parse(params[:start])
     new_date = new_start.to_date
     new_time = new_start.strftime('%H:%M')
     

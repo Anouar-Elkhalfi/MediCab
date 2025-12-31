@@ -142,8 +142,9 @@
 
   /* Styles FullCalendar */
   #calendar {
-    min-height: 700px;
+    height: 650px;
     background: white;
+    overflow: hidden;
   }
   
   .fc-event {
@@ -229,6 +230,7 @@
     calendarInstance = new FullCalendar.Calendar(calendarEl, {
       initialView: 'timeGridWeek',
       locale: 'fr',
+      timeZone: 'local', // Utiliser le timezone local du navigateur
       firstDay: 1, // Semaine commence le lundi
       headerToolbar: {
         left: 'prev,next today',
@@ -246,7 +248,8 @@
       slotMaxTime: '20:00:00',
       slotDuration: '00:15:00',
       allDaySlot: false,
-      height: 'auto',
+      height: 650,
+      contentHeight: 550,
       nowIndicator: true,
       editable: true, // Permet le drag & drop
       droppable: true,
@@ -346,7 +349,9 @@
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            alert('✅ ' + data.message);
+            // Recharger les événements pour afficher les bonnes heures et couleurs
+            calendarInstance.refetchEvents();
+            loadWaitingList();
           } else {
             alert('❌ Erreur : ' + data.errors.join(', '));
             info.revert();
@@ -385,8 +390,12 @@
   
   // Fonction pour charger la liste d'attente
   function loadWaitingList() {
-    fetch('/appointments/events_json?start=' + new Date().toISOString().split('T')[0] + 
-          '&end=' + new Date().toISOString().split('T')[0])
+    const today = new Date().toISOString().split('T')[0];
+    const medecinFilterElement = document.getElementById('medecin-filter');
+    const medecinId = medecinFilterElement ? medecinFilterElement.value : 'all';
+    const url = `/appointments/events_json?start=${today}&end=${today}${medecinId && medecinId !== 'all' ? '&medecin_id=' + medecinId : ''}`;
+    
+    fetch(url)
       .then(response => response.json())
       .then(events => {
         // Filtrer les RDV en salle d'attente d'aujourd'hui
@@ -440,15 +449,26 @@
       });
   }
   
-  // Écouter les événements Turbo ET le chargement initial
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeCalendar);
-  } else {
-    // DOM déjà chargé (cas de Turbo)
+  // Initialiser une seule fois
+  let isInitialized = false;
+  
+  function safeInitialize() {
+    // Éviter les initialisations multiples
+    if (isInitialized && calendarInstance) {
+      console.log('⚠️ Calendrier déjà initialisé, ignorer.');
+      return;
+    }
     initializeCalendar();
+    isInitialized = true;
   }
-  document.addEventListener('turbo:load', initializeCalendar);
-  document.addEventListener('turbo:render', initializeCalendar);
+  
+  // Écouter seulement turbo:load pour éviter les doublons
+  document.addEventListener('turbo:load', safeInitialize);
+  
+  // Si la page est déjà chargée (premier chargement sans Turbo)
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    safeInitialize();
+  }
   
   // Nettoyer lors de la navigation Turbo
   document.addEventListener('turbo:before-render', function() {
@@ -456,6 +476,7 @@
       console.log('Navigation Turbo détectée, destruction du calendrier');
       calendarInstance.destroy();
       calendarInstance = null;
+      isInitialized = false;
     }
   });
 </script>
