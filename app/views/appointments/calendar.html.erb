@@ -405,8 +405,13 @@
           return eventDate === today && event.extendedProps.statut === 'en_salle_attente';
         });
         
+        // Trier par heure de début (ordre chronologique)
+        waitingAppointments.sort((a, b) => new Date(a.start) - new Date(b.start));
+        
         const waitingList = document.getElementById('waiting-list');
         const waitingCount = document.getElementById('waiting-count');
+        
+        if (!waitingList || !waitingCount) return;
         
         waitingCount.textContent = waitingAppointments.length;
         
@@ -426,7 +431,7 @@
                   <div>
                     <strong>${apt.extendedProps.patient}</strong>
                     <div class="text-muted small">
-                      ${startTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                      RDV: ${startTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
                   <a href="/appointments/${apt.id}" class="btn btn-sm btn-outline-primary">
@@ -440,17 +445,21 @@
       })
       .catch(error => {
         console.error('Erreur chargement liste d\'attente:', error);
-        document.getElementById('waiting-list').innerHTML = `
-          <div class="text-center text-danger p-3">
-            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-            <div>Erreur de chargement</div>
-          </div>
-        `;
+        const waitingList = document.getElementById('waiting-list');
+        if (waitingList) {
+          waitingList.innerHTML = `
+            <div class="text-center text-danger p-3">
+              <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+              <div>Erreur de chargement</div>
+            </div>
+          `;
+        }
       });
   }
   
   // Initialiser une seule fois
   let isInitialized = false;
+  let refreshInterval = null;
   
   function safeInitialize() {
     // Éviter les initialisations multiples
@@ -460,6 +469,12 @@
     }
     initializeCalendar();
     isInitialized = true;
+    
+    // Rafraîchir la liste d'attente toutes les 30 secondes
+    if (refreshInterval) clearInterval(refreshInterval);
+    refreshInterval = setInterval(() => {
+      loadWaitingList();
+    }, 30000);
   }
   
   // Écouter seulement turbo:load pour éviter les doublons
@@ -477,6 +492,10 @@
       calendarInstance.destroy();
       calendarInstance = null;
       isInitialized = false;
+    }
+    if (refreshInterval) {
+      clearInterval(refreshInterval);
+      refreshInterval = null;
     }
   });
 </script>
